@@ -3,6 +3,11 @@
   "displayName": "Podmanager",
   "description": "Manage Podman containers, images, volumes, and networks.(unofficial)",
   "version": "0.0.1",
+  "publisher": "dreamcatcher45",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dreamcatcher45/podmanager"
+  },
   "engines": {
     "vscode": "^1.92.0"
   },
