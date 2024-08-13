@@ -81,6 +81,11 @@
         "command": "podmanager.stopContainer",
         "title": "Stop Container",
         "icon": "$(stop)"
+      },
+      {
+        "command": "podmanager.openInTerminal",
+        "title": "Open in Terminal",
+        "icon": "$(terminal)"
       }
     ],
     "menus": {
@@ -103,6 +108,21 @@
           "group": "inline"
         },
         {
+          "command": "podmanager.startContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.stopContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.openInTerminal",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
           "command": "podmanager.deleteImage",
           "when": "view == podmanView && viewItem == image",
           "group": "inline"
@@ -115,16 +135,6 @@
         {
           "command": "podmanager.deleteNetwork",
           "when": "view == podmanView && viewItem == network",
-          "group": "inline"
-        },
-        {
-          "command": "podmanager.startContainer",
-          "when": "view == podmanView && viewItem == container",
-          "group": "inline"
-        },
-        {
-          "command": "podmanager.stopContainer",
-          "when": "view == podmanView && viewItem == container",
           "group": "inline"
         }
       ]

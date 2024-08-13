@@ -115,6 +115,18 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    const openInTerminalCommand = vscode.commands.registerCommand('podmanager.openInTerminal', async (item: PodmanItem) => {
+        if (item.id) {
+            try {
+                const terminal = vscode.window.createTerminal(`Podman: ${item.label}`);
+                terminal.sendText(`podman exec -it ${item.id} /bin/sh`);
+                terminal.show();
+            } catch (error) {
+                vscode.window.showErrorMessage(`Failed to open terminal for container ${item.id}: ${error}`);
+            }
+        }
+    });
+
     context.subscriptions.push(
         refreshCommand,
         powerOnPodmanMachineCommand,
@@ -124,7 +136,8 @@ export function activate(context: vscode.ExtensionContext) {
         deleteVolumeCommand,
         deleteNetworkCommand,
         startContainerCommand,
-        stopContainerCommand
+        stopContainerCommand,
+        openInTerminalCommand
     );
 
     checkPodmanMachineStatus();
@@ -258,6 +271,22 @@ class PodmanItem extends vscode.TreeItem {
     ) {
         super(label, collapsibleState);
         this.contextValue = contextValue;
+        this.iconPath = this.getIconPath();
+    }
+
+    private getIconPath(): vscode.ThemeIcon | undefined {
+        switch (this.contextValue) {
+            case 'container':
+                return new vscode.ThemeIcon(this.status?.startsWith('Up') ? 'vm-running' : 'vm');
+            case 'image':
+                return new vscode.ThemeIcon('file-media');
+            case 'volume':
+                return new vscode.ThemeIcon('database');
+            case 'network':
+                return new vscode.ThemeIcon('globe');
+            default:
+                return undefined;
+        }
     }
 }
 
