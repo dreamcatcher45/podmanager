@@ -44,6 +44,11 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "podmanager.powerOnPodmanMachine",
+        "title": "Power On Podman Machine",
+        "icon": "$(vm-running)"
+      },
+      {
         "command": "podmanager.startPodmanMachine",
         "title": "Start Podman Machine"
       },
@@ -82,6 +87,11 @@
       "view/title": [
         {
           "command": "podmanager.refreshView",
+          "when": "view == podmanView",
+          "group": "navigation"
+        },
+        {
+          "command": "podmanager.powerOnPodmanMachine",
           "when": "view == podmanView",
           "group": "navigation"
         }

@@ -97,8 +97,27 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    const powerOnPodmanMachineCommand = vscode.commands.registerCommand('podmanager.powerOnPodmanMachine', async () => {
+        try {
+            const { stdout } = await execAsync('podman machine list --format "{{.Name}}|{{.Running}}"');
+            const machines = stdout.split('\n').filter(line => line.trim() !== '');
+            const runningMachine = machines.find(machine => machine.split('|')[1] === 'Running');
+    
+            if (runningMachine) {
+                vscode.window.showInformationMessage('Podman machine is already running.');
+            } else {
+                await execAsync('podman machine start');
+                vscode.window.showInformationMessage('Podman machine started successfully');
+                podmanTreeDataProvider.refresh();
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage('Failed to start Podman machine: ' + error);
+        }
+    });
+
     context.subscriptions.push(
         refreshCommand,
+        powerOnPodmanMachineCommand,
         startPodmanMachineCommand,
         deleteContainerCommand,
         deleteImageCommand,
@@ -113,15 +132,21 @@ export function activate(context: vscode.ExtensionContext) {
 
 async function checkPodmanMachineStatus() {
     try {
-        await execAsync('podman machine list');
-    } catch (error) {
-        const answer = await vscode.window.showInformationMessage(
-            'Podman machine is not running. Do you want to start it?',
-            'Yes', 'No'
-        );
-        if (answer === 'Yes') {
-            vscode.commands.executeCommand('podmanager.startPodmanMachine');
+        const { stdout } = await execAsync('podman machine list --format "{{.Name}}|{{.Running}}"');
+        const machines = stdout.split('\n').filter(line => line.trim() !== '');
+        const runningMachine = machines.find(machine => machine.split('|')[1] === 'Running');
+
+        if (!runningMachine) {
+            const answer = await vscode.window.showInformationMessage(
+                'Podman machine is not running. Do you want to start it?',
+                'Yes', 'No'
+            );
+            if (answer === 'Yes') {
+                vscode.commands.executeCommand('podmanager.powerOnPodmanMachine');
+            }
         }
+    } catch (error) {
+        vscode.window.showErrorMessage('Failed to check Podman machine status: ' + error);
     }
 }
 
