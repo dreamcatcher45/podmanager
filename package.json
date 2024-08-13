@@ -1,6 +1,6 @@
 {
   "name": "podmanager",
-  "displayName": "Podmanager",
+  "displayName": "Pod Manager",
   "description": "Manage Podman containers, images, volumes, and networks.(unofficial)",
   "version": "0.0.1",
   "publisher": "dreamcatcher45",
