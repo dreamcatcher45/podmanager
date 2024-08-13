@@ -1,0 +1,137 @@
+{
+  "name": "podmanager",
+  "displayName": "Podmanager",
+  "description": "Manage Podman containers, images, volumes, and networks.(unofficial)",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.92.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "icon": "media/icon.png",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "podmanager-sidebar",
+          "title": "Podmanager",
+          "icon": "media/podman-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "podmanager-sidebar": [
+        {
+          "id": "podmanView",
+          "name": "Podman Resources"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "podmanager.refreshView",
+        "title": "Refresh Podman View",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "podmanager.startPodmanMachine",
+        "title": "Start Podman Machine"
+      },
+      {
+        "command": "podmanager.deleteContainer",
+        "title": "Delete Container",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "podmanager.deleteImage",
+        "title": "Delete Image",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "podmanager.deleteVolume",
+        "title": "Delete Volume",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "podmanager.deleteNetwork",
+        "title": "Delete Network",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "podmanager.startContainer",
+        "title": "Start Container",
+        "icon": "$(play)"
+      },
+      {
+        "command": "podmanager.stopContainer",
+        "title": "Stop Container",
+        "icon": "$(stop)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "podmanager.refreshView",
+          "when": "view == podmanView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "podmanager.deleteContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.deleteImage",
+          "when": "view == podmanView && viewItem == image",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.deleteVolume",
+          "when": "view == podmanView && viewItem == volume",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.deleteNetwork",
+          "when": "view == podmanView && viewItem == network",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.startContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.stopContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.7",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.92.0",
+    "@typescript-eslint/eslint-plugin": "^7.14.1",
+    "@typescript-eslint/parser": "^7.11.0",
+    "@vscode/test-cli": "^0.0.9",
+    "@vscode/test-electron": "^2.4.0",
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.5"
+  }
+}

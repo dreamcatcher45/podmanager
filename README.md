@@ -1,0 +1,50 @@
+# Podmanager - VSCode Extension
+
+**Podmanager** is an unofficial Visual Studio Code extension designed to help you manage Podman containers, images, volumes, and networks directly from the VSCode interface.
+
+<img src="https://github.com/dreamcatcher45/QRCode-Generator/blob/main/icon.png?raw=true" alt="Podmanager Logo" width="100"/>
+
+## Features
+
+- **Manage Podman Resources**: View and manage containers, images, volumes, and networks.
+- **Podman Machine Control**: Start your Podman machine directly from VSCode.
+- **Container Management**: 
+  - Start and stop containers.
+  - Delete containers, images, volumes, and networks with ease.
+- **Easy Navigation**: Refresh the Podman view with a single click to ensure you have the latest information.
+
+## Installation
+
+1. **Install Podmanager**: Open the Extensions view in VSCode (`Ctrl+Shift+X`), search for "Podmanager", and install the extension.
+2. **Ensure Podman is installed**: Make sure you have Podman installed on your system and accessible via your command line.
+
+## Getting Started
+
+Once the extension is installed:
+
+1. **Activate the Extension**: The extension will automatically activate when VSCode starts.
+2. **Open the Podmanager Sidebar**: Click on the Podmanager icon in the activity bar on the left side to open the Podmanager sidebar.
+3. **Manage Your Resources**: Use the Podmanager view to interact with your containers, images, volumes, and networks.
+
+### Commands
+
+- **Refresh Podman View**: Refresh the Podman resources view.
+- **Start Podman Machine**: Start your Podman machine.
+
+- **Container Management**:
+  - Start a specific container.
+  - Stop a running container.
+  - Permanently delete a container.
+    
+- **Image Management**:
+  - Remove an image from your system.
+    
+- **Volume Management**:
+  - Remove a volume from your system.
+    
+- **Network Management**:
+  - Remove a network from your system.
+
+## Contributing
+
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](#) to report bugs or request features.
