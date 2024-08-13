@@ -2,7 +2,7 @@
   "name": "podmanager",
   "displayName": "Pod Manager",
   "description": "Manage Podman containers, images, volumes, and networks.(unofficial)",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "dreamcatcher45",
   "repository": {
     "type": "git",
@@ -44,13 +44,9 @@
         "icon": "$(refresh)"
       },
       {
-        "command": "podmanager.powerOnPodmanMachine",
-        "title": "Power On Podman Machine",
-        "icon": "$(vm-running)"
-      },
-      {
         "command": "podmanager.startPodmanMachine",
-        "title": "Start Podman Machine"
+        "title": "Start Podman Machine",
+        "icon": "$(vm-running)"
       },
       {
         "command": "podmanager.deleteContainer",
@@ -96,7 +92,7 @@
           "group": "navigation"
         },
         {
-          "command": "podmanager.powerOnPodmanMachine",
+          "command": "podmanager.startPodmanMachine",
           "when": "view == podmanView",
           "group": "navigation"
         }

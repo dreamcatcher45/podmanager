@@ -17,9 +17,20 @@ export function activate(context: vscode.ExtensionContext) {
 
     const startPodmanMachineCommand = vscode.commands.registerCommand('podmanager.startPodmanMachine', async () => {
         try {
-            await execAsync('podman machine start');
-            vscode.window.showInformationMessage('Podman machine started successfully');
-            podmanTreeDataProvider.refresh();
+            const isRunning = await checkPodmanMachineStatus();
+            if (isRunning) {
+                vscode.window.showInformationMessage('Podman machine is already running.');
+            } else {
+                const answer = await vscode.window.showInformationMessage(
+                    'Podman machine is not running. Do you want to start it?',
+                    'Yes', 'No'
+                );
+                if (answer === 'Yes') {
+                    await execAsync('podman machine start');
+                    vscode.window.showInformationMessage('Podman machine started successfully');
+                    podmanTreeDataProvider.refresh();
+                }
+            }
         } catch (error) {
             vscode.window.showErrorMessage('Failed to start Podman machine: ' + error);
         }
@@ -97,24 +108,6 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    const powerOnPodmanMachineCommand = vscode.commands.registerCommand('podmanager.powerOnPodmanMachine', async () => {
-        try {
-            const { stdout } = await execAsync('podman machine list --format "{{.Name}}|{{.Running}}"');
-            const machines = stdout.split('\n').filter(line => line.trim() !== '');
-            const runningMachine = machines.find(machine => machine.split('|')[1] === 'Running');
-    
-            if (runningMachine) {
-                vscode.window.showInformationMessage('Podman machine is already running.');
-            } else {
-                await execAsync('podman machine start');
-                vscode.window.showInformationMessage('Podman machine started successfully');
-                podmanTreeDataProvider.refresh();
-            }
-        } catch (error) {
-            vscode.window.showErrorMessage('Failed to start Podman machine: ' + error);
-        }
-    });
-
     const openInTerminalCommand = vscode.commands.registerCommand('podmanager.openInTerminal', async (item: PodmanItem) => {
         if (item.id) {
             try {
@@ -129,7 +122,6 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         refreshCommand,
-        powerOnPodmanMachineCommand,
         startPodmanMachineCommand,
         deleteContainerCommand,
         deleteImageCommand,
@@ -143,23 +135,15 @@ export function activate(context: vscode.ExtensionContext) {
     checkPodmanMachineStatus();
 }
 
-async function checkPodmanMachineStatus() {
+async function checkPodmanMachineStatus(): Promise<boolean> {
     try {
         const { stdout } = await execAsync('podman machine list --format "{{.Name}}|{{.Running}}"');
         const machines = stdout.split('\n').filter(line => line.trim() !== '');
         const runningMachine = machines.find(machine => machine.split('|')[1] === 'Running');
-
-        if (!runningMachine) {
-            const answer = await vscode.window.showInformationMessage(
-                'Podman machine is not running. Do you want to start it?',
-                'Yes', 'No'
-            );
-            if (answer === 'Yes') {
-                vscode.commands.executeCommand('podmanager.powerOnPodmanMachine');
-            }
-        }
+        return !!runningMachine;
     } catch (error) {
         vscode.window.showErrorMessage('Failed to check Podman machine status: ' + error);
+        return false;
     }
 }
 
@@ -199,7 +183,7 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
         }
     }
 
-	private async getContainers(): Promise<PodmanItem[]> {
+    private async getContainers(): Promise<PodmanItem[]> {
         try {
             const { stdout } = await execAsync('podman container ls -a --format "{{.ID}}|{{.Names}}|{{.Status}}"');
             return stdout.split('\n')
