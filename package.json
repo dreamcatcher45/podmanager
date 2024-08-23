@@ -2,7 +2,7 @@
   "name": "podmanager",
   "displayName": "Pod Manager",
   "description": "Manage Podman containers, images, volumes, and networks.(unofficial)",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "publisher": "dreamcatcher45",
   "repository": {
     "type": "git",
@@ -85,23 +85,19 @@
       },
       {
         "command": "podmanager.composeUp",
-        "title": "Compose Up",
-        "icon": "$(arrow-up)"
+        "title": "Compose Up"
       },
       {
         "command": "podmanager.composeStart",
-        "title": "Compose Start",
-        "icon": "$(play)"
+        "title": "Compose Start"
       },
       {
         "command": "podmanager.composeStop",
-        "title": "Compose Stop",
-        "icon": "$(stop)"
+        "title": "Compose Stop"
       },
       {
         "command": "podmanager.composeDown",
-        "title": "Compose Down",
-        "icon": "$(arrow-down)"
+        "title": "Compose Down"
       }
     ],
     "menus": {

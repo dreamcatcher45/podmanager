@@ -122,7 +122,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    // New Compose commands
+    // Updated Compose commands
     const composeUpCommand = vscode.commands.registerCommand('podmanager.composeUp', async () => {
         await runComposeCommand('up -d');
     });
@@ -184,12 +184,23 @@ async function runComposeCommand(command: string) {
     }
 
     const rootPath = workspaceFolders[0].uri.fsPath;
-    const composeFile = path.join(rootPath, 'docker-compose.yml');
+    const composeFileNames = ['docker-compose.yml', 'docker-compose.yaml', 'compose.yml', 'compose.yaml'];
+    let composeFile: string | undefined;
 
-    if (!fs.existsSync(composeFile)) {
-        vscode.window.showErrorMessage('No docker-compose.yml file found in the current directory');
+    for (const fileName of composeFileNames) {
+        const filePath = path.join(rootPath, fileName);
+        if (fs.existsSync(filePath)) {
+            composeFile = filePath;
+            break;
+        }
+    }
+
+    if (!composeFile) {
+        vscode.window.showErrorMessage('No compose file found in the current directory');
         return;
     }
+
+    vscode.window.showInformationMessage(`Starting Podman Compose ${command}...`);
 
     try {
         const { stdout, stderr } = await execAsync(`podman-compose -f "${composeFile}" ${command}`);
@@ -320,7 +331,7 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
             const { stdout } = await execAsync('podman-compose ps --format "{{.ID}}|{{.Name}}|{{.Status}}"');
             return stdout.split('\n')
                 .filter(line => line.trim() !== '')
-                .map(line => {
+               .map(line => {
                     const [id, name, status] = line.split('|');
                     const isRunning = status.startsWith('Up');
                     return new PodmanItem(`${name} (${id})`, vscode.TreeItemCollapsibleState.None, 'compose-container', id, status, isRunning);
@@ -362,13 +373,13 @@ class PodmanItem extends vscode.TreeItem {
             case 'network':
                 return new vscode.ThemeIcon('globe');
             case 'compose-up':
+                return new vscode.ThemeIcon('arrow-up');
             case 'compose-start':
+                return new vscode.ThemeIcon('play');
             case 'compose-stop':
+                return new vscode.ThemeIcon('stop');
             case 'compose-down':
-                return {
-                    light: path.join(extensionPath, 'resources', 'light', `${this.contextValue}.svg`),
-                    dark: path.join(extensionPath, 'resources', 'dark', `${this.contextValue}.svg`)
-                };
+                return new vscode.ThemeIcon('trash');
             default:
                 return undefined;
         }
@@ -389,4 +400,5 @@ class PodmanItem extends vscode.TreeItem {
         }
     }
 }
+
 export function deactivate() {}

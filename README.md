@@ -1,15 +1,15 @@
 # Podmanager - VSCode Extension
 
 **Podmanager** is an unofficial Visual Studio Code extension designed to help you manage Podman containers, images, volumes, and networks directly from the VSCode interface.
-
-<img src="https://github.com/dreamcatcher45/QRCode-Generator/blob/main/icon.png?raw=true" alt="Podmanager Logo" width="100"/>
-
 ## Features
 
 - **Manage Podman Resources**: View and manage containers, images, volumes, and networks.
 - **Podman Machine Control**: Start your Podman machine directly from VSCode.
 - **Container Management**: 
   - Start and stop containers.
+  - Delete containers, images, volumes, and networks with ease.
+- **Docker Compose/ Podman Compose**: 
+  - Start and stop containers from file.
   - Delete containers, images, volumes, and networks with ease.
 - **Easy Navigation**: Refresh the Podman view with a single click to ensure you have the latest information.
 
@@ -44,6 +44,12 @@ Once the extension is installed:
     
 - **Network Management**:
   - Remove a network from your system.
+
+- **Compose**:
+  - Compose up.
+  - Compose start.
+  - Compose stop.
+  - Compose down.
 
 ## Contributing
 
