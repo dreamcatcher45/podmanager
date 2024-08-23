@@ -19,7 +19,7 @@
     "onStartupFinished"
   ],
   "main": "./out/extension.js",
-  "contributes": {
+ "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
@@ -82,6 +82,26 @@
         "command": "podmanager.openInTerminal",
         "title": "Open in Terminal",
         "icon": "$(terminal)"
+      },
+      {
+        "command": "podmanager.composeUp",
+        "title": "Compose Up",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "podmanager.composeStart",
+        "title": "Compose Start",
+        "icon": "$(play)"
+      },
+      {
+        "command": "podmanager.composeStop",
+        "title": "Compose Stop",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "podmanager.composeDown",
+        "title": "Compose Down",
+        "icon": "$(arrow-down)"
       }
     ],
     "menus": {
@@ -131,6 +151,26 @@
         {
           "command": "podmanager.deleteNetwork",
           "when": "view == podmanView && viewItem == network",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.composeUp",
+          "when": "view == podmanView && viewItem == compose-up",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.composeStart",
+          "when": "view == podmanView && viewItem == compose-start",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.composeStop",
+          "when": "view == podmanView && viewItem == compose-stop",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.composeDown",
+          "when": "view == podmanView && viewItem == compose-down",
           "group": "inline"
         }
       ]
