@@ -39,6 +39,11 @@
     },
     "commands": [
       {
+        "command": "podmanager.restartContainer",
+        "title": "Restart Container",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "podmanager.refreshView",
         "title": "Refresh Podman View",
         "icon": "$(refresh)"
@@ -85,23 +90,43 @@
       },
       {
         "command": "podmanager.composeUp",
-        "title": "Compose Up"
+        "title": "Compose Up",
+        "icon": "$(arrow-up)"
       },
       {
         "command": "podmanager.composeStart",
-        "title": "Compose Start"
+        "title": "Compose Start",
+        "icon": "$(play)"
       },
       {
         "command": "podmanager.composeStop",
-        "title": "Compose Stop"
+        "title": "Compose Stop",
+        "icon": "$(stop)"
       },
       {
         "command": "podmanager.composeDown",
-        "title": "Compose Down"
+        "title": "Compose Down",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
       "view/title": [
+        {
+          "command": "podmanager.deleteContainer",
+          "when": "view == podmanView && (viewItem == container || viewItem == compose-container)"
+        },
+        {
+          "command": "podmanager.startContainer",
+          "when": "view == podmanView && (viewItem == container || viewItem == compose-container)"
+        },
+        {
+          "command": "podmanager.stopContainer",
+          "when": "view == podmanView && (viewItem == container || viewItem == compose-container)"
+        },
+        {
+          "command": "podmanager.openInTerminal",
+          "when": "view == podmanView && (viewItem == container || viewItem == compose-container)"
+        },
         {
           "command": "podmanager.refreshView",
           "when": "view == podmanView",
@@ -114,6 +139,31 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "podmanager.startContainer",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.stopContainer",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.restartContainer",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.deleteContainer",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.openInTerminal",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "inline"
+        },
         {
           "command": "podmanager.deleteContainer",
           "when": "view == podmanView && viewItem == container",
@@ -150,24 +200,26 @@
           "group": "inline"
         },
         {
-          "command": "podmanager.composeUp",
-          "when": "view == podmanView && viewItem == compose-up",
-          "group": "inline"
-        },
-        {
           "command": "podmanager.composeStart",
-          "when": "view == podmanView && viewItem == compose-start",
+          "when": "view == podmanView && viewItem == compose-group",
           "group": "inline"
         },
         {
           "command": "podmanager.composeStop",
-          "when": "view == podmanView && viewItem == compose-stop",
+          "when": "view == podmanView && viewItem == compose-group",
           "group": "inline"
         },
         {
           "command": "podmanager.composeDown",
-          "when": "view == podmanView && viewItem == compose-down",
+          "when": "view == podmanView && viewItem == compose-group",
           "group": "inline"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "podmanager.composeUp",
+          "when": "resourceExtname == .yml || resourceExtname == .yaml",
+          "group": "2_workspace"
         }
       ]
     }

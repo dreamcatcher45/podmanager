@@ -110,6 +110,16 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    const restartContainerCommand = vscode.commands.registerCommand('podmanager.restartContainer', async (item: PodmanItem) => {
+        try {
+            await execAsync(`podman container restart ${item.id}`);
+            vscode.window.showInformationMessage(`Container ${item.id} restarted successfully`);
+            podmanTreeDataProvider.refresh();
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to restart container ${item.id}: ` + error);
+        }
+    });
+
     const openInTerminalCommand = vscode.commands.registerCommand('podmanager.openInTerminal', async (item: PodmanItem) => {
         if (item.id) {
             try {
@@ -123,16 +133,19 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Updated Compose commands
-    const composeUpCommand = vscode.commands.registerCommand('podmanager.composeUp', async () => {
-        await runComposeCommand('up -d');
+    const composeUpCommand = vscode.commands.registerCommand('podmanager.composeUp', async (uri?: vscode.Uri) => {
+        await runComposeCommand('up -d', uri);
+        podmanTreeDataProvider.refresh();
     });
 
     const composeStartCommand = vscode.commands.registerCommand('podmanager.composeStart', async () => {
         await runComposeCommand('start');
+        podmanTreeDataProvider.refresh();
     });
 
     const composeStopCommand = vscode.commands.registerCommand('podmanager.composeStop', async () => {
         await runComposeCommand('stop');
+        podmanTreeDataProvider.refresh();
     });
 
     const composeDownCommand = vscode.commands.registerCommand('podmanager.composeDown', async () => {
@@ -142,6 +155,7 @@ export function activate(context: vscode.ExtensionContext) {
         );
         if (answer === 'Yes') {
             await runComposeCommand('down');
+            podmanTreeDataProvider.refresh();
         }
     });
 
@@ -149,12 +163,13 @@ export function activate(context: vscode.ExtensionContext) {
         refreshCommand,
         startPodmanMachineCommand,
         deleteContainerCommand,
+        startContainerCommand,
+        stopContainerCommand,
+        restartContainerCommand,
+        openInTerminalCommand,
         deleteImageCommand,
         deleteVolumeCommand,
         deleteNetworkCommand,
-        startContainerCommand,
-        stopContainerCommand,
-        openInTerminalCommand,
         composeUpCommand,
         composeStartCommand,
         composeStopCommand,
@@ -176,27 +191,32 @@ async function checkPodmanMachineStatus(): Promise<boolean> {
     }
 }
 
-async function runComposeCommand(command: string) {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders) {
-        vscode.window.showErrorMessage('No workspace folder is open');
-        return;
-    }
-
-    const rootPath = workspaceFolders[0].uri.fsPath;
-    const composeFileNames = ['docker-compose.yml', 'docker-compose.yaml', 'compose.yml', 'compose.yaml'];
+async function runComposeCommand(command: string, uri?: vscode.Uri) {
     let composeFile: string | undefined;
 
-    for (const fileName of composeFileNames) {
-        const filePath = path.join(rootPath, fileName);
-        if (fs.existsSync(filePath)) {
-            composeFile = filePath;
-            break;
+    if (uri) {
+        composeFile = uri.fsPath;
+    } else {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            vscode.window.showErrorMessage('No workspace folder is open');
+            return;
+        }
+
+        const rootPath = workspaceFolders[0].uri.fsPath;
+        const composeFileNames = ['docker-compose.yml', 'docker-compose.yaml', 'compose.yml', 'compose.yaml'];
+
+        for (const fileName of composeFileNames) {
+            const filePath = path.join(rootPath, fileName);
+            if (fs.existsSync(filePath)) {
+                composeFile = filePath;
+                break;
+            }
         }
     }
 
     if (!composeFile) {
-        vscode.window.showErrorMessage('No compose file found in the current directory');
+        vscode.window.showErrorMessage('No compose file found');
         return;
     }
 
@@ -205,9 +225,8 @@ async function runComposeCommand(command: string) {
     try {
         const { stdout, stderr } = await execAsync(`podman-compose -f "${composeFile}" ${command}`);
         vscode.window.showInformationMessage(`Podman Compose ${command} executed successfully`);
-        console.log(stdout);
         if (stderr) {
-            console.error(stderr);
+            vscode.window.showWarningMessage(`Podman Compose ${command} completed with warnings: ${stderr}`);
         }
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to execute Podman Compose ${command}: ${error}`);
@@ -232,8 +251,7 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
                 new PodmanItem('Containers', vscode.TreeItemCollapsibleState.Collapsed, 'containers'),
                 new PodmanItem('Images', vscode.TreeItemCollapsibleState.Collapsed, 'images'),
                 new PodmanItem('Volumes', vscode.TreeItemCollapsibleState.Collapsed, 'volumes'),
-                new PodmanItem('Networks', vscode.TreeItemCollapsibleState.Collapsed, 'networks'),
-                new PodmanItem('Compose', vscode.TreeItemCollapsibleState.Collapsed, 'compose')
+                new PodmanItem('Networks', vscode.TreeItemCollapsibleState.Collapsed, 'networks')
             ];
         }
 
@@ -246,27 +264,66 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
                 return this.getVolumes();
             case 'Networks':
                 return this.getNetworks();
-            case 'Compose':
-                return this.getComposeItems();
             default:
+                if (element.contextValue === 'compose-group') {
+                    return element.children || [];
+                }
                 return [];
         }
     }
 
     private async getContainers(): Promise<PodmanItem[]> {
         try {
-            const { stdout } = await execAsync('podman container ls -a --format "{{.ID}}|{{.Names}}|{{.Status}}"');
-            return stdout.split('\n')
+            const { stdout: containerStdout } = await execAsync('podman container ls -a --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Labels}}"');
+            const containers = containerStdout.split('\n')
                 .filter(line => line.trim() !== '')
                 .map(line => {
-                    const [id, name, status] = line.split('|');
+                    const [id, name, status, labels] = line.split('|');
                     const isRunning = status.startsWith('Up');
-                    return new PodmanItem(`${name} (${id})`, vscode.TreeItemCollapsibleState.None, 'container', id, status, isRunning);
+                    const isCompose = labels.includes('com.docker.compose.project');
+                    const composeProject = isCompose ? this.extractComposeProject(labels) : '';
+                    return { id, name, status, isRunning, isCompose, composeProject };
                 });
+
+            const regularContainers = containers
+                .filter(c => !c.isCompose)
+                .map(c => new PodmanItem(`${c.name} (${c.id})`, vscode.TreeItemCollapsibleState.None, 'container', c.id, c.status, c.isRunning));
+
+            const composeContainers = containers.filter(c => c.isCompose);
+            
+            if (composeContainers.length > 0) {
+                const composeGroups = this.groupComposeContainers(composeContainers);
+                const composeGroupItems = Object.entries(composeGroups).map(([project, containers], index) => {
+                    const groupItem = new PodmanItem(`Compose Group ${index + 1}: ${project}`, vscode.TreeItemCollapsibleState.Expanded, 'compose-group');
+                    groupItem.children = containers.map(c => 
+                        new PodmanItem(`${c.name} (${c.id})`, vscode.TreeItemCollapsibleState.None, 'compose-container', c.id, c.status, c.isRunning)
+                    );
+                    return groupItem;
+                });
+                return [...regularContainers, ...composeGroupItems];
+            }
+
+            return regularContainers;
         } catch (error) {
             vscode.window.showErrorMessage('Failed to get containers: ' + error);
             return [];
         }
+    }
+
+    private extractComposeProject(labels: string): string {
+        const projectLabel = labels.split(',').find(label => label.startsWith('com.docker.compose.project='));
+        return projectLabel ? projectLabel.split('=')[1] : 'Unknown Project';
+    }
+
+    private groupComposeContainers(containers: any[]): { [key: string]: any[] } {
+        return containers.reduce((groups: { [key: string]: any[] }, container) => {
+            const project = container.composeProject;
+            if (!groups[project]) {
+                groups[project] = [];
+            }
+            groups[project].push(container);
+            return groups;
+        }, {});
     }
 
     private async getImages(): Promise<PodmanItem[]> {
@@ -313,34 +370,6 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
             return [];
         }
     }
-
-    private async getComposeItems(): Promise<PodmanItem[]> {
-        const composeItems = [
-            new PodmanItem('Up', vscode.TreeItemCollapsibleState.None, 'compose-up'),
-            new PodmanItem('Start', vscode.TreeItemCollapsibleState.None, 'compose-start'),
-            new PodmanItem('Stop', vscode.TreeItemCollapsibleState.None, 'compose-stop'),
-            new PodmanItem('Down', vscode.TreeItemCollapsibleState.None, 'compose-down')
-        ];
-
-        const composeContainers = await this.getComposeContainers();
-        return [...composeItems, ...composeContainers];
-    }
-
-    private async getComposeContainers(): Promise<PodmanItem[]> {
-        try {
-            const { stdout } = await execAsync('podman-compose ps --format "{{.ID}}|{{.Name}}|{{.Status}}"');
-            return stdout.split('\n')
-                .filter(line => line.trim() !== '')
-               .map(line => {
-                    const [id, name, status] = line.split('|');
-                    const isRunning = status.startsWith('Up');
-                    return new PodmanItem(`${name} (${id})`, vscode.TreeItemCollapsibleState.None, 'compose-container', id, status, isRunning);
-                });
-        } catch (error) {
-            console.error('Failed to get compose containers: ' + error);
-            return [];
-        }
-    }
 }
 
 class PodmanItem extends vscode.TreeItem {
@@ -350,16 +379,17 @@ class PodmanItem extends vscode.TreeItem {
         public readonly contextValue: string,
         public readonly id?: string,
         public readonly status?: string,
-        public readonly isRunning?: boolean
+        public readonly isRunning?: boolean,
+        public children?: PodmanItem[]
     ) {
         super(label, collapsibleState);
         this.contextValue = contextValue;
         this.iconPath = this.getIconPath();
+        this.tooltip = this.getTooltip();
         this.command = this.getCommand();
     }
-
+    
     private getIconPath(): vscode.ThemeIcon | { light: string; dark: string } | undefined {
-        const extensionPath = vscode.extensions.getExtension('your-extension-id')?.extensionPath || '';
         switch (this.contextValue) {
             case 'container':
             case 'compose-container':
@@ -372,32 +402,29 @@ class PodmanItem extends vscode.TreeItem {
                 return new vscode.ThemeIcon('database');
             case 'network':
                 return new vscode.ThemeIcon('globe');
-            case 'compose-up':
-                return new vscode.ThemeIcon('arrow-up');
-            case 'compose-start':
-                return new vscode.ThemeIcon('play');
-            case 'compose-stop':
-                return new vscode.ThemeIcon('stop');
-            case 'compose-down':
-                return new vscode.ThemeIcon('trash');
+            case 'compose-group':
+                return new vscode.ThemeIcon('layers');
             default:
                 return undefined;
         }
     }
 
-    private getCommand(): vscode.Command | undefined {
-        switch (this.contextValue) {
-            case 'compose-up':
-                return { command: 'podmanager.composeUp', title: 'Compose Up' };
-            case 'compose-start':
-                return { command: 'podmanager.composeStart', title: 'Compose Start' };
-            case 'compose-stop':
-                return { command: 'podmanager.composeStop', title: 'Compose Stop' };
-            case 'compose-down':
-                return { command: 'podmanager.composeDown', title: 'Compose Down' };
-            default:
-                return undefined;
+    private getTooltip(): string | undefined {
+        if (this.contextValue === 'container' || this.contextValue === 'compose-container') {
+            return `ID: ${this.id}\nStatus: ${this.status}`;
         }
+        return undefined;
+    }
+
+    private getCommand(): vscode.Command | undefined {
+        if (this.contextValue === 'container' || this.contextValue === 'compose-container') {
+            return {
+                command: 'podmanager.openInTerminal',
+                title: 'Open in Terminal',
+                arguments: [this]
+            };
+        }
+        return undefined;
     }
 }
 
