@@ -19,7 +19,7 @@
     "onStartupFinished"
   ],
   "main": "./out/extension.js",
- "contributes": {
+  "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
@@ -104,6 +104,11 @@
         "icon": "$(stop)"
       },
       {
+        "command": "podmanager.composeRestart",
+        "title": "Compose Restart",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "podmanager.composeDown",
         "title": "Compose Down",
         "icon": "$(trash)"
@@ -111,22 +116,6 @@
     ],
     "menus": {
       "view/title": [
-        {
-          "command": "podmanager.deleteContainer",
-          "when": "view == podmanView && (viewItem == container || viewItem == compose-container)"
-        },
-        {
-          "command": "podmanager.startContainer",
-          "when": "view == podmanView && (viewItem == container || viewItem == compose-container)"
-        },
-        {
-          "command": "podmanager.stopContainer",
-          "when": "view == podmanView && (viewItem == container || viewItem == compose-container)"
-        },
-        {
-          "command": "podmanager.openInTerminal",
-          "when": "view == podmanView && (viewItem == container || viewItem == compose-container)"
-        },
         {
           "command": "podmanager.refreshView",
           "when": "view == podmanView",
@@ -139,6 +128,31 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "podmanager.startContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.stopContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.restartContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.deleteContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.openInTerminal",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
         {
           "command": "podmanager.startContainer",
           "when": "view == podmanView && viewItem == compose-container",
@@ -165,26 +179,6 @@
           "group": "inline"
         },
         {
-          "command": "podmanager.deleteContainer",
-          "when": "view == podmanView && viewItem == container",
-          "group": "inline"
-        },
-        {
-          "command": "podmanager.startContainer",
-          "when": "view == podmanView && viewItem == container",
-          "group": "inline"
-        },
-        {
-          "command": "podmanager.stopContainer",
-          "when": "view == podmanView && viewItem == container",
-          "group": "inline"
-        },
-        {
-          "command": "podmanager.openInTerminal",
-          "when": "view == podmanView && viewItem == container",
-          "group": "inline"
-        },
-        {
           "command": "podmanager.deleteImage",
           "when": "view == podmanView && viewItem == image",
           "group": "inline"
@@ -206,6 +200,11 @@
         },
         {
           "command": "podmanager.composeStop",
+          "when": "view == podmanView && viewItem == compose-group",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.composeRestart",
           "when": "view == podmanView && viewItem == compose-group",
           "group": "inline"
         },

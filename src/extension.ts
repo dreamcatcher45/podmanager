@@ -138,23 +138,28 @@ export function activate(context: vscode.ExtensionContext) {
         podmanTreeDataProvider.refresh();
     });
 
-    const composeStartCommand = vscode.commands.registerCommand('podmanager.composeStart', async () => {
-        await runComposeCommand('start');
+    const composeStartCommand = vscode.commands.registerCommand('podmanager.composeStart', async (item: PodmanItem) => {
+        await runComposeCommand('start', undefined, item.composeProject);
         podmanTreeDataProvider.refresh();
     });
 
-    const composeStopCommand = vscode.commands.registerCommand('podmanager.composeStop', async () => {
-        await runComposeCommand('stop');
+    const composeStopCommand = vscode.commands.registerCommand('podmanager.composeStop', async (item: PodmanItem) => {
+        await runComposeCommand('stop', undefined, item.composeProject);
         podmanTreeDataProvider.refresh();
     });
 
-    const composeDownCommand = vscode.commands.registerCommand('podmanager.composeDown', async () => {
+    const composeRestartCommand = vscode.commands.registerCommand('podmanager.composeRestart', async (item: PodmanItem) => {
+        await runComposeCommand('restart', undefined, item.composeProject);
+        podmanTreeDataProvider.refresh();
+    });
+
+    const composeDownCommand = vscode.commands.registerCommand('podmanager.composeDown', async (item: PodmanItem) => {
         const answer = await vscode.window.showWarningMessage(
-            'Are you sure you want to stop and remove all compose containers?',
+            `Are you sure you want to stop and remove all compose containers for ${item.composeProject}?`,
             'Yes', 'No'
         );
         if (answer === 'Yes') {
-            await runComposeCommand('down');
+            await runComposeCommand('down', undefined, item.composeProject);
             podmanTreeDataProvider.refresh();
         }
     });
@@ -173,6 +178,7 @@ export function activate(context: vscode.ExtensionContext) {
         composeUpCommand,
         composeStartCommand,
         composeStopCommand,
+        composeRestartCommand,
         composeDownCommand
     );
 
@@ -191,12 +197,12 @@ async function checkPodmanMachineStatus(): Promise<boolean> {
     }
 }
 
-async function runComposeCommand(command: string, uri?: vscode.Uri) {
+async function runComposeCommand(command: string, uri?: vscode.Uri, composeProject?: string) {
     let composeFile: string | undefined;
 
     if (uri) {
         composeFile = uri.fsPath;
-    } else {
+    } else if (composeProject) {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders) {
             vscode.window.showErrorMessage('No workspace folder is open');
@@ -215,7 +221,7 @@ async function runComposeCommand(command: string, uri?: vscode.Uri) {
         }
     }
 
-    if (!composeFile) {
+    if (!composeFile && !composeProject) {
         vscode.window.showErrorMessage('No compose file found');
         return;
     }
@@ -223,7 +229,15 @@ async function runComposeCommand(command: string, uri?: vscode.Uri) {
     vscode.window.showInformationMessage(`Starting Podman Compose ${command}...`);
 
     try {
-        const { stdout, stderr } = await execAsync(`podman-compose -f "${composeFile}" ${command}`);
+        let cmd = `podman-compose`;
+        if (composeFile) {
+            cmd += ` -f "${composeFile}"`;
+        } else if (composeProject) {
+            cmd += ` -p "${composeProject}"`;
+        }
+        cmd += ` ${command}`;
+
+        const { stdout, stderr } = await execAsync(cmd);
         vscode.window.showInformationMessage(`Podman Compose ${command} executed successfully`);
         if (stderr) {
             vscode.window.showWarningMessage(`Podman Compose ${command} completed with warnings: ${stderr}`);
@@ -294,9 +308,9 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
             if (composeContainers.length > 0) {
                 const composeGroups = this.groupComposeContainers(composeContainers);
                 const composeGroupItems = Object.entries(composeGroups).map(([project, containers], index) => {
-                    const groupItem = new PodmanItem(`Compose Group ${index + 1}: ${project}`, vscode.TreeItemCollapsibleState.Expanded, 'compose-group');
+                    const groupItem = new PodmanItem(`Compose Group ${index + 1}: ${project}`, vscode.TreeItemCollapsibleState.Expanded, 'compose-group', undefined, undefined, undefined, project);
                     groupItem.children = containers.map(c => 
-                        new PodmanItem(`${c.name} (${c.id})`, vscode.TreeItemCollapsibleState.None, 'compose-container', c.id, c.status, c.isRunning)
+                        new PodmanItem(`${c.name} (${c.id})`, vscode.TreeItemCollapsibleState.None, 'compose-container', c.id, c.status, c.isRunning, project)
                     );
                     return groupItem;
                 });
@@ -309,7 +323,7 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
             return [];
         }
     }
-
+    
     private extractComposeProject(labels: string): string {
         const projectLabel = labels.split(',').find(label => label.startsWith('com.docker.compose.project='));
         return projectLabel ? projectLabel.split('=')[1] : 'Unknown Project';
@@ -380,6 +394,7 @@ class PodmanItem extends vscode.TreeItem {
         public readonly id?: string,
         public readonly status?: string,
         public readonly isRunning?: boolean,
+        public readonly composeProject?: string,
         public children?: PodmanItem[]
     ) {
         super(label, collapsibleState);
@@ -397,7 +412,7 @@ class PodmanItem extends vscode.TreeItem {
                     ? new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.green'))
                     : new vscode.ThemeIcon('circle-outline', new vscode.ThemeColor('charts.red'));
             case 'image':
-                return new vscode.ThemeIcon('file-media');
+                return new vscode.ThemeIcon('file');
             case 'volume':
                 return new vscode.ThemeIcon('database');
             case 'network':
