@@ -251,8 +251,16 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<PodmanItem | undefined | null | void> = new vscode.EventEmitter<PodmanItem | undefined | null | void>();
     readonly onDidChangeTreeData: vscode.Event<PodmanItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
+    private refreshTimeout: NodeJS.Timeout | null = null;
+
     refresh(): void {
+      if (this.refreshTimeout) {
+        clearTimeout(this.refreshTimeout);
+      }
+      this.refreshTimeout = setTimeout(() => {
         this._onDidChangeTreeData.fire();
+        this.refreshTimeout = null;
+      }, 300); // Adjust the delay as needed
     }
 
     getTreeItem(element: PodmanItem): vscode.TreeItem {
