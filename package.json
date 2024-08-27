@@ -4,6 +4,7 @@
   "description": "Manage Podman containers, images, volumes, and networks.(unofficial)",
   "version": "0.0.7",
   "publisher": "dreamcatcher45",
+  "homepage": "https://pod-manager.pages.dev",
   "repository": {
     "type": "git",
     "url": "https://github.com/dreamcatcher45/podmanager"
