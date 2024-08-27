@@ -15,7 +15,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'  # Updated to use Node.js 20.x
+          node-version: '20'  # Using Node.js 20.x
 
       - name: Install dependencies
         run: npm ci
@@ -27,7 +27,7 @@ jobs:
       - name: Get latest release version
         id: latest_release
         run: |
-          latest=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name | sed 's/v//')
+          latest=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r .tag_name)
           echo "version=$latest" >> $GITHUB_OUTPUT
 
       - name: Compare versions
@@ -35,7 +35,9 @@ jobs:
         run: |
           current="${{ steps.current_version.outputs.version }}"
           latest="${{ steps.latest_release.outputs.version }}"
-          if [ "$(printf '%s\n' "$latest" "$current" | sort -V | tail -n1)" = "$current" ] && [ "$current" != "$latest" ]; then
+          # Remove 'v' prefix if present
+          latest_without_v="${latest#v}"
+          if [ "$(printf '%s\n' "$latest_without_v" "$current" | sort -V | tail -n1)" = "$current" ] && [ "$current" != "$latest_without_v" ]; then
             echo "should_release=true" >> $GITHUB_OUTPUT
           else
             echo "should_release=false" >> $GITHUB_OUTPUT
