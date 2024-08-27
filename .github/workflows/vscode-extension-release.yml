@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main  # or your default branch name
+    paths:
+      - 'package.json'
 
 jobs:
   check-version-and-release:
