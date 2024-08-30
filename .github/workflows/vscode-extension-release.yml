@@ -51,10 +51,22 @@ jobs:
         if: steps.compare_versions.outputs.should_release == 'true'
         run: npx vsce package
 
+      # - name: Get VSIX filename
+      #   if: steps.compare_versions.outputs.should_release == 'true'
+      #   id: vsix_filename
+      #   run: echo "filename=$(ls *.vsix)" >> $GITHUB_OUTPUT
+
       - name: Get VSIX filename
         if: steps.compare_versions.outputs.should_release == 'true'
         id: vsix_filename
-        run: echo "filename=$(ls *.vsix)" >> $GITHUB_OUTPUT
+        run: |
+          VSIX_FILE=$(find . -maxdepth 1 -name "*.vsix" -print -quit)
+          if [ -z "$VSIX_FILE" ]; then
+            echo "Error: No VSIX file found"
+            exit 1
+          fi
+          echo "filename=$(basename "$VSIX_FILE")" >> $GITHUB_OUTPUT
+        shell: bash
 
       - name: Create Release
         if: steps.compare_versions.outputs.should_release == 'true'
