@@ -16,24 +16,24 @@
     "Other"
   ],
   "tags": [
-  "Podman",
-  "containers",
-  "images",
-  "volumes",
-  "networks",
-  "container-management",
-  "docker-alternative",
-  "devops",
-  "infrastructure",
-  "virtualization",
-  "Linux",
-  "open-source",
-  "CLI",
-  "remote-development",
-  "system-administration",
-  "podmanager",
-  "pod-manager"
-],
+    "Podman",
+    "containers",
+    "images",
+    "volumes",
+    "networks",
+    "container-management",
+    "docker-alternative",
+    "devops",
+    "infrastructure",
+    "virtualization",
+    "Linux",
+    "open-source",
+    "CLI",
+    "remote-development",
+    "system-administration",
+    "podmanager",
+    "pod-manager"
+  ],
   "icon": "media/icon.png",
   "activationEvents": [
     "onStartupFinished"
@@ -132,6 +132,11 @@
         "command": "podmanager.composeDown",
         "title": "Compose Down",
         "icon": "$(trash)"
+      },
+      {
+        "command": "podmanager.refreshOverview",
+        "title": "Refresh Podman Overview",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
@@ -231,6 +236,11 @@
         {
           "command": "podmanager.composeDown",
           "when": "view == podmanView && viewItem == compose-group",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.refreshOverview",
+          "when": "view == podmanView && viewItem == overview",
           "group": "inline"
         }
       ],

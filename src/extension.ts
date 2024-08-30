@@ -17,6 +17,11 @@ export function activate(context: vscode.ExtensionContext) {
         podmanTreeDataProvider.refresh();
     });
 
+    // overview support 
+    const refreshOverviewCommand = vscode.commands.registerCommand('podmanager.refreshOverview', () => {
+        podmanTreeDataProvider.refreshOverview();
+    });
+
     const startPodmanMachineCommand = vscode.commands.registerCommand('podmanager.startPodmanMachine', async () => {
         try {
             const isRunning = await checkPodmanMachineStatus();
@@ -179,7 +184,8 @@ export function activate(context: vscode.ExtensionContext) {
         composeStartCommand,
         composeStopCommand,
         composeRestartCommand,
-        composeDownCommand
+        composeDownCommand,
+        refreshOverviewCommand
     );
 
     checkPodmanMachineStatus();
@@ -253,6 +259,8 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
 
     private refreshTimeout: NodeJS.Timeout | null = null;
 
+    private overviewData: string = '';
+
     refresh(): void {
         if (this.refreshTimeout) {
             clearTimeout(this.refreshTimeout);
@@ -263,6 +271,20 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
         }, 300);
     }
 
+    //overview support
+    constructor() {
+        this.refreshOverview();
+    }
+    async refreshOverview(): Promise<void> {
+        try {
+            const { stdout } = await execAsync('podman system df');
+            this.overviewData = stdout;
+            this.refresh();
+        } catch (error) {
+            vscode.window.showErrorMessage('Failed to fetch Podman system overview: ' + error);
+        }
+    }
+    
     getTreeItem(element: PodmanItem): vscode.TreeItem {
         return element;
     }
@@ -273,7 +295,8 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
                 new PodmanItem('Containers', vscode.TreeItemCollapsibleState.Collapsed, 'containers'),
                 new PodmanItem('Images', vscode.TreeItemCollapsibleState.Collapsed, 'images'),
                 new PodmanItem('Volumes', vscode.TreeItemCollapsibleState.Collapsed, 'volumes'),
-                new PodmanItem('Networks', vscode.TreeItemCollapsibleState.Collapsed, 'networks')
+                new PodmanItem('Networks', vscode.TreeItemCollapsibleState.Collapsed, 'networks'),
+                new PodmanItem('Overview', vscode.TreeItemCollapsibleState.Collapsed, 'overview'),
             ];
         }
 
@@ -288,12 +311,19 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
                 return this.getNetworks();
             case 'image':
                 return element.children || [];
+            case 'overview':
+                return this.getOverviewItems();
             default:
                 if (element.contextValue === 'compose-group' || element.contextValue === 'image') {
                     return element.children || [];
                 }
                 return [];
         }
+    }
+
+    private getOverviewItems(): PodmanItem[] {
+        const lines = this.overviewData.split('\n');
+        return lines.map(line => new PodmanItem(line, vscode.TreeItemCollapsibleState.None, 'overview-item'));
     }
 
     private async getImages(): Promise<PodmanItem[]> {
