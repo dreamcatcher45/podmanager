@@ -1,6 +1,14 @@
 # Changelog
 
 
+## [0.0.9] - 2024-08-30
+### Added
+- Overview section
+  - displays the disk usage and details
+- Color indicators for images
+  - green color for images in use
+  - red color for unused images
+
 ## [0.0.8] - 2024-08-30
 ### Added
 - Bug Fix
