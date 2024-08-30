@@ -2,7 +2,7 @@
   "name": "podmanager",
   "displayName": "Pod Manager",
   "description": "Manage Podman containers, images, volumes, and networks.(unofficial)",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "publisher": "dreamcatcher45",
   "homepage": "https://pod-manager.pages.dev",
   "repository": {
@@ -15,6 +15,25 @@
   "categories": [
     "Other"
   ],
+  "tags": [
+  "Podman",
+  "containers",
+  "images",
+  "volumes",
+  "networks",
+  "container-management",
+  "docker-alternative",
+  "devops",
+  "infrastructure",
+  "virtualization",
+  "Linux",
+  "open-source",
+  "CLI",
+  "remote-development",
+  "system-administration",
+  "podmanager",
+  "pod-manager"
+],
   "icon": "media/icon.png",
   "activationEvents": [
     "onStartupFinished"
