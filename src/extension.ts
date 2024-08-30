@@ -289,6 +289,9 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
             case 'image':
                 return element.children || [];
             default:
+                if (element.contextValue === 'compose-group' || element.contextValue === 'image') {
+                    return element.children || [];
+                }
                 return [];
         }
     }
