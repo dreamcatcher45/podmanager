@@ -254,13 +254,13 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
     private refreshTimeout: NodeJS.Timeout | null = null;
 
     refresh(): void {
-      if (this.refreshTimeout) {
-        clearTimeout(this.refreshTimeout);
-      }
-      this.refreshTimeout = setTimeout(() => {
-        this._onDidChangeTreeData.fire();
-        this.refreshTimeout = null;
-      }, 300); // Adjust the delay as needed
+        if (this.refreshTimeout) {
+            clearTimeout(this.refreshTimeout);
+        }
+        this.refreshTimeout = setTimeout(() => {
+            this._onDidChangeTreeData.fire();
+            this.refreshTimeout = null;
+        }, 300); // Adjust the delay as needed
     }
 
     getTreeItem(element: PodmanItem): vscode.TreeItem {
@@ -287,10 +287,49 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
             case 'Networks':
                 return this.getNetworks();
             default:
-                if (element.contextValue === 'compose-group') {
+                if (element.contextValue === 'compose-group' || element.contextValue === 'image') {
                     return element.children || [];
                 }
                 return [];
+        }
+    }
+
+    private async getImages(): Promise<PodmanItem[]> {
+        try {
+            const { stdout } = await execAsync('podman image ls --format "{{.ID}}|{{.Repository}}|{{.Tag}}"');
+            const imageMap = new Map<string, string[]>();
+
+            stdout.split('\n')
+                .filter(line => line.trim() !== '')
+                .forEach(line => {
+                    const [id, repository, tag] = line.split('|');
+                    if (!imageMap.has(id)) {
+                        imageMap.set(id, []);
+                    }
+                    imageMap.get(id)!.push(`${repository}:${tag}`);
+                });
+
+            return Array.from(imageMap.entries()).map(([id, names]) => {
+                const label = names.length > 1 
+                    ? `Image: ${id} (${names.length} tags)`
+                    : `Image: ${id} (${names[0]})`;
+                const children = names.map(name => 
+                    new PodmanItem(name, vscode.TreeItemCollapsibleState.None, 'image-tag', id)
+                );
+                return new PodmanItem(
+                    label,
+                    names.length > 1 ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
+                    'image',
+                    id,
+                    undefined,
+                    undefined,
+                    undefined,
+                    children
+                );
+            });
+        } catch (error) {
+            vscode.window.showErrorMessage('Failed to get images: ' + error);
+            return [];
         }
     }
 
@@ -348,20 +387,32 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
         }, {});
     }
 
-    private async getImages(): Promise<PodmanItem[]> {
-        try {
-            const { stdout } = await execAsync('podman image ls --format "{{.ID}}|{{.Repository}}:{{.Tag}}"');
-            return stdout.split('\n')
-                .filter(line => line.trim() !== '')
-                .map(line => {
-                    const [id, name] = line.split('|');
-                    return new PodmanItem(`${name} (${id})`, vscode.TreeItemCollapsibleState.None, 'image', id);
-                });
-        } catch (error) {
-            vscode.window.showErrorMessage('Failed to get images: ' + error);
-            return [];
-        }
-    }
+    // private async getImages(): Promise<PodmanItem[]> {
+    //     try {
+    //         const { stdout } = await execAsync('podman image ls --format "{{.ID}}|{{.Repository}}|{{.Tag}}"');
+    //         const imageMap = new Map<string, string[]>();
+
+    //         stdout.split('\n')
+    //             .filter(line => line.trim() !== '')
+    //             .forEach(line => {
+    //                 const [id, repository, tag] = line.split('|');
+    //                 if (!imageMap.has(id)) {
+    //                     imageMap.set(id, []);
+    //                 }
+    //                 imageMap.get(id)!.push(`${repository}:${tag}`);
+    //             });
+
+    //         return Array.from(imageMap.entries()).map(([id, names]) => {
+    //             const label = names.length > 1 
+    //                 ? `${names[0]} (+${names.length - 1} more) (${id})`
+    //                 : `${names[0]} (${id})`;
+    //             return new PodmanItem(label, vscode.TreeItemCollapsibleState.None, 'image', id, undefined, undefined, undefined, names);
+    //         });
+    //     } catch (error) {
+    //         vscode.window.showErrorMessage('Failed to get images: ' + error);
+    //         return [];
+    //     }
+    // }
 
     private async getVolumes(): Promise<PodmanItem[]> {
         try {
@@ -420,6 +471,7 @@ class PodmanItem extends vscode.TreeItem {
                     ? new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.green'))
                     : new vscode.ThemeIcon('circle-outline', new vscode.ThemeColor('charts.red'));
             case 'image':
+            case 'image-tag':
                 return new vscode.ThemeIcon('file');
             case 'volume':
                 return new vscode.ThemeIcon('database');
@@ -435,6 +487,10 @@ class PodmanItem extends vscode.TreeItem {
     private getTooltip(): string | undefined {
         if (this.contextValue === 'container' || this.contextValue === 'compose-container') {
             return `ID: ${this.id}\nStatus: ${this.status}`;
+        } else if (this.contextValue === 'image') {
+            return `ID: ${this.id}`;
+        } else if (this.contextValue === 'image-tag') {
+            return `ID: ${this.id}\nTag: ${this.label}`;
         }
         return undefined;
     }
