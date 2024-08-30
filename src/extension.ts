@@ -298,10 +298,11 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
 
     private async getImages(): Promise<PodmanItem[]> {
         try {
-            const { stdout } = await execAsync('podman image ls --format "{{.ID}}|{{.Repository}}|{{.Tag}}"');
+            // Get all images
+            const { stdout: imageStdout } = await execAsync('podman image ls --format "{{.ID}}|{{.Repository}}|{{.Tag}}"');
             const imageMap = new Map<string, string[]>();
-
-            stdout.split('\n')
+    
+            imageStdout.split('\n')
                 .filter(line => line.trim() !== '')
                 .forEach(line => {
                     const [id, repository, tag] = line.split('|');
@@ -310,8 +311,13 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
                     }
                     imageMap.get(id)!.push(`${repository}:${tag}`);
                 });
-
+    
+            // Get all containers to check which images are in use
+            const { stdout: containerStdout } = await execAsync('podman container ls -a --format "{{.ImageID}}"');
+            const usedImageIds = new Set(containerStdout.split('\n').filter(line => line.trim() !== ''));
+    
             return Array.from(imageMap.entries()).map(([id, names]) => {
+                const isUsed = usedImageIds.has(id);
                 const label = names.length > 1 
                     ? `Image: ${id} (${names.length} tags)`
                     : `Image: ${id} (${names[0]})`;
@@ -326,7 +332,8 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
                     id,
                     undefined,
                     undefined,
-                    children
+                    children,
+                    isUsed
                 );
             });
         } catch (error) {
@@ -430,7 +437,8 @@ class PodmanItem extends vscode.TreeItem {
         public readonly status?: string,
         public readonly isRunning?: boolean,
         public readonly composeProject?: string,
-        public children?: PodmanItem[]
+        public children?: PodmanItem[],
+        public readonly isUsed?: boolean
     ) {
         super(label, collapsibleState);
         this.contextValue = contextValue;
@@ -448,7 +456,9 @@ class PodmanItem extends vscode.TreeItem {
                     : new vscode.ThemeIcon('circle-outline', new vscode.ThemeColor('charts.red'));
             case 'image':
             case 'image-tag':
-                return new vscode.ThemeIcon('file');
+                return this.isUsed
+                    ? new vscode.ThemeIcon('file', new vscode.ThemeColor('charts.green'))
+                    : new vscode.ThemeIcon('file', new vscode.ThemeColor('charts.red'));
             case 'volume':
                 return new vscode.ThemeIcon('database');
             case 'network':
@@ -464,7 +474,7 @@ class PodmanItem extends vscode.TreeItem {
         if (this.contextValue === 'container' || this.contextValue === 'compose-container') {
             return `ID: ${this.id}\nStatus: ${this.status}`;
         } else if (this.contextValue === 'image') {
-            return `ID: ${this.id}`;
+            return `ID: ${this.id}\nUsed: ${this.isUsed ? 'Yes' : 'No'}`;
         } else if (this.contextValue === 'image-tag') {
             return `ID: ${this.id}\nTag: ${this.label}`;
         }
