@@ -323,7 +323,9 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
 
     private getOverviewItems(): PodmanItem[] {
         const lines = this.overviewData.split('\n');
-        return lines.map(line => new PodmanItem(line, vscode.TreeItemCollapsibleState.None, 'overview-item'));
+        return lines
+            .filter(line => line.trim() !== '') // Filter out empty lines
+            .map(line => new PodmanItem(line, vscode.TreeItemCollapsibleState.None, 'overview-item'));
     }
 
     private async getImages(): Promise<PodmanItem[]> {
