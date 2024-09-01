@@ -22,6 +22,35 @@ export function activate(context: vscode.ExtensionContext) {
         podmanTreeDataProvider.refreshOverview();
     });
 
+    //additional utitilities option
+    const openToolsMenuCommand = vscode.commands.registerCommand('podmanager.openToolsMenu', async () => {
+        const selected = await vscode.window.showQuickPick(
+            [
+                { label: 'Prune Dangling Images', command: 'podmanager.pruneImages' },
+                { label: 'Prune All Unused Images', command: 'podmanager.pruneAllImages' },
+                { label: 'Prune Builder Cache', command: 'podmanager.pruneBuilderCache' }
+            ],
+            { placeHolder: 'Select a Podman tool' }
+        );
+
+        if (selected) {
+            vscode.commands.executeCommand(selected.command);
+        }
+    });
+
+    const pruneImagesCommand = vscode.commands.registerCommand('podmanager.pruneImages', async () => {
+        await runPruneCommand('podman image prune -f', 'Remove all dangling images');
+    });
+
+    const pruneAllImagesCommand = vscode.commands.registerCommand('podmanager.pruneAllImages', async () => {
+        await runPruneCommand('podman image prune -a -f', 'Remove all unused images');
+    });
+
+    const pruneBuilderCacheCommand = vscode.commands.registerCommand('podmanager.pruneBuilderCache', async () => {
+        await runPruneCommand('podman builder prune -a -f', 'Remove Podman builder cache');
+    });
+
+
     const startPodmanMachineCommand = vscode.commands.registerCommand('podmanager.startPodmanMachine', async () => {
         try {
             const isRunning = await checkPodmanMachineStatus();
@@ -185,10 +214,36 @@ export function activate(context: vscode.ExtensionContext) {
         composeStopCommand,
         composeRestartCommand,
         composeDownCommand,
-        refreshOverviewCommand
+        refreshOverviewCommand,
+        openToolsMenuCommand,
+        pruneImagesCommand,
+        pruneAllImagesCommand,
+        pruneBuilderCacheCommand
     );
 
     checkPodmanMachineStatus();
+}
+
+
+async function runPruneCommand(command: string, description: string): Promise<void> {
+    const answer = await vscode.window.showWarningMessage(
+        `Are you sure you want to ${description.toLowerCase()}?`,
+        'Yes', 'No'
+    );
+
+    if (answer === 'Yes') {
+        try {
+            vscode.window.showInformationMessage(`Starting to ${description.toLowerCase()}...`);
+            const { stdout, stderr } = await execAsync(command);
+            if (stderr) {
+                vscode.window.showErrorMessage(`Error while pruning: ${stderr}`);
+            } else {
+                vscode.window.showInformationMessage(`Successfully ${description.toLowerCase()}: ${stdout}`);
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to ${description.toLowerCase()}: ${error}`);
+        }
+    }
 }
 
 async function checkPodmanMachineStatus(): Promise<boolean> {

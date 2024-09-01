@@ -2,7 +2,7 @@
   "name": "podmanager",
   "displayName": "Pod Manager",
   "description": "Manage Podman containers, images, volumes, and networks.(unofficial)",
-  "version": "0.0.9",
+  "version": "0.1.2",
   "publisher": "dreamcatcher45",
   "homepage": "https://pod-manager.pages.dev",
   "repository": {
@@ -137,6 +137,23 @@
         "command": "podmanager.refreshOverview",
         "title": "Refresh Podman Overview",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "podmanager.openToolsMenu",
+        "title": "Podman Tools",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "podmanager.pruneImages",
+        "title": "Prune Dangling Images"
+      },
+      {
+        "command": "podmanager.pruneAllImages",
+        "title": "Prune All Unused Images"
+      },
+      {
+        "command": "podmanager.pruneBuilderCache",
+        "title": "Prune Builder Cache"
       }
     ],
     "menus": {
@@ -148,6 +165,11 @@
         },
         {
           "command": "podmanager.startPodmanMachine",
+          "when": "view == podmanView",
+          "group": "navigation"
+        },
+        {
+          "command": "podmanager.openToolsMenu",
           "when": "view == podmanView",
           "group": "navigation"
         }
