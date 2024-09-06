@@ -352,6 +352,7 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
                 new PodmanItem('Volumes', vscode.TreeItemCollapsibleState.Collapsed, 'volumes'),
                 new PodmanItem('Networks', vscode.TreeItemCollapsibleState.Collapsed, 'networks'),
                 new PodmanItem('Overview', vscode.TreeItemCollapsibleState.Collapsed, 'overview'),
+                new PodmanItem('Compose Groups', vscode.TreeItemCollapsibleState.Collapsed, 'compose-groups'),
             ];
         }
 
@@ -368,13 +369,15 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
                 return element.children || [];
             case 'overview':
                 return this.getOverviewItems();
+            case 'compose-groups':
+                return this.getComposeGroups();
+            case 'compose-group':
+                return element.children || [];
             default:
-                if (element.contextValue === 'compose-group' || element.contextValue === 'image') {
-                    return element.children || [];
-                }
                 return [];
         }
     }
+
 
     private getOverviewItems(): PodmanItem[] {
         const lines = this.overviewData.split('\n');
@@ -442,27 +445,57 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
                     return { id, name, status, isRunning, isCompose, composeProject };
                 });
 
-            const regularContainers = containers
+            return containers
                 .filter(c => !c.isCompose)
                 .map(c => new PodmanItem(`${c.name} (${c.id})`, vscode.TreeItemCollapsibleState.None, 'container', c.id, c.status, c.isRunning));
-
-            const composeContainers = containers.filter(c => c.isCompose);
-            
-            if (composeContainers.length > 0) {
-                const composeGroups = this.groupComposeContainers(composeContainers);
-                const composeGroupItems = Object.entries(composeGroups).map(([project, containers], index) => {
-                    const groupItem = new PodmanItem(`Compose Group ${index + 1}: ${project}`, vscode.TreeItemCollapsibleState.Expanded, 'compose-group', undefined, undefined, undefined, project);
-                    groupItem.children = containers.map(c => 
-                        new PodmanItem(`${c.name} (${c.id})`, vscode.TreeItemCollapsibleState.None, 'compose-container', c.id, c.status, c.isRunning, project)
-                    );
-                    return groupItem;
-                });
-                return [...regularContainers, ...composeGroupItems];
-            }
-
-            return regularContainers;
         } catch (error) {
             vscode.window.showErrorMessage('Failed to get containers: ' + error);
+            return [];
+        }
+    }
+    
+    // private extractComposeProject(labels: string): string {
+    //     const projectLabel = labels.split(',').find(label => label.startsWith('com.docker.compose.project='));
+    //     return projectLabel ? projectLabel.split('=')[1] : 'Unknown Project';
+    // }
+
+    // private groupComposeContainers(containers: any[]): { [key: string]: any[] } {
+    //     return containers.reduce((groups: { [key: string]: any[] }, container) => {
+    //         const project = container.composeProject;
+    //         if (!groups[project]) {
+    //             groups[project] = [];
+    //         }
+    //         groups[project].push(container);
+    //         return groups;
+    //     }, {});
+    // }
+
+    //get compose group
+    private async getComposeGroups(): Promise<PodmanItem[]> {
+        try {
+            const { stdout: containerStdout } = await execAsync('podman container ls -a --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Labels}}"');
+            const composeContainers = containerStdout.split('\n')
+                .filter(line => line.trim() !== '')
+                .map(line => {
+                    const [id, name, status, labels] = line.split('|');
+                    const isRunning = status.startsWith('Up');
+                    const isCompose = labels.includes('com.docker.compose.project');
+                    const composeProject = isCompose ? this.extractComposeProject(labels) : '';
+                    return { id, name, status, isRunning, isCompose, composeProject };
+                })
+                .filter(c => c.isCompose);
+
+            const composeGroups = this.groupComposeContainers(composeContainers);
+            
+            return Object.entries(composeGroups).map(([project, containers], index) => {
+                const groupItem = new PodmanItem(`Compose Group ${index + 1}: ${project}`, vscode.TreeItemCollapsibleState.Collapsed, 'compose-group', undefined, undefined, undefined, project);
+                groupItem.children = containers.map(c => 
+                    new PodmanItem(`${c.name} (${c.id})`, vscode.TreeItemCollapsibleState.None, 'compose-container', c.id, c.status, c.isRunning, project)
+                );
+                return groupItem;
+            });
+        } catch (error) {
+            vscode.window.showErrorMessage('Failed to get compose groups: ' + error);
             return [];
         }
     }
@@ -556,6 +589,7 @@ class PodmanItem extends vscode.TreeItem {
                 return undefined;
         }
     }
+
 
     private getTooltip(): string | undefined {
         if (this.contextValue === 'container' || this.contextValue === 'compose-container') {
