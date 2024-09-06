@@ -217,15 +217,15 @@ export function activate(context: vscode.ExtensionContext) {
 
     const deletePodCommand = vscode.commands.registerCommand('podmanager.deletePod', async (item: PodmanItem) => {
         const answer = await vscode.window.showWarningMessage(
-            `Are you sure you want to delete pod ${item.id}?`,
+            `Are you sure you want to forcefully delete pod ${item.id}?`,
             'Yes', 'No'
         );
         if (answer === 'Yes') {
-            await runPodCommand('rm', item.id!);
+            await runPodCommand('rm', item.id!, true);
             podmanTreeDataProvider.refresh();
         }
     });
-
+    
     context.subscriptions.push(
         refreshCommand,
         startPodmanMachineCommand,
@@ -348,9 +348,10 @@ async function runComposeCommand(command: string, uri?: vscode.Uri, composeProje
     }
 }
 
-async function runPodCommand(command: string, podId: string) {
+async function runPodCommand(command: string, podId: string, force: boolean = false) {
     try {
-        const { stdout, stderr } = await execAsync(`podman pod ${command} ${podId}`);
+        const forceFlag = force ? ' -f' : '';
+        const { stdout, stderr } = await execAsync(`podman pod ${command}${forceFlag} ${podId}`);
         vscode.window.showInformationMessage(`Pod ${command} executed successfully`);
         if (stderr) {
             vscode.window.showWarningMessage(`Pod ${command} completed with warnings: ${stderr}`);
