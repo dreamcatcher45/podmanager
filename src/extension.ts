@@ -366,7 +366,7 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
                 new PodmanItem('Volumes', vscode.TreeItemCollapsibleState.Collapsed, 'volumes'),
                 new PodmanItem('Networks', vscode.TreeItemCollapsibleState.Collapsed, 'networks'),
                 new PodmanItem('Overview', vscode.TreeItemCollapsibleState.Collapsed, 'overview'),
-                new PodmanItem('Compose Groups', vscode.TreeItemCollapsibleState.Collapsed, 'compose-groups'),
+                new PodmanItem('Pods', vscode.TreeItemCollapsibleState.Collapsed, 'pods'),
             ];
         }
 
@@ -383,16 +383,57 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
                 return element.children || [];
             case 'overview':
                 return this.getOverviewItems();
-            case 'compose-groups':
-                return this.getComposeGroups();
-            case 'compose-group':
-                return element.children || [];
+            case 'pods':
+                return this.getPods();
+            case 'pod':
+                return this.getPodContainers(element.id!);
             default:
                 return [];
         }
     }
 
+    private async getPods(): Promise<PodmanItem[]> {
+        try {
+            const { stdout } = await execAsync('podman pod ps --format "{{.Name}}|{{.Status}}|{{.Created}}"');
+            return stdout.split('\n')
+                .filter(line => line.trim() !== '')
+                .map(line => {
+                    const [name, status, created] = line.split('|');
+                    return new PodmanItem(
+                        `Pod: ${name}`,
+                        vscode.TreeItemCollapsibleState.Collapsed,
+                        'pod',
+                        name,
+                        `Status: ${status}\nCreated: ${created}`
+                    );
+                });
+        } catch (error) {
+            vscode.window.showErrorMessage('Failed to get pods: ' + error);
+            return [];
+        }
+    }
 
+    private async getPodContainers(podName: string): Promise<PodmanItem[]> {
+        try {
+            const { stdout } = await execAsync(`podman ps --filter "pod=${podName}" --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.CreatedAt}}"`);
+            return stdout.split('\n')
+                .filter(line => line.trim() !== '')
+                .map(line => {
+                    const [id, name, status, created] = line.split('|');
+                    return new PodmanItem(
+                        `${name} (${id})`,
+                        vscode.TreeItemCollapsibleState.None,
+                        'container',
+                        id,
+                        `Status: ${status}\nCreated: ${created}`,
+                        status.toLowerCase().includes('up')
+                    );
+                });
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to get containers for pod ${podName}: ${error}`);
+            return [];
+        }
+    }
     private getOverviewItems(): PodmanItem[] {
         const lines = this.overviewData.split('\n');
         return lines
@@ -569,7 +610,6 @@ class PodmanItem extends vscode.TreeItem {
     private getIconPath(): vscode.ThemeIcon | { light: string; dark: string } | undefined {
         switch (this.contextValue) {
             case 'container':
-            case 'compose-container':
                 return this.isRunning
                     ? new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.green'))
                     : new vscode.ThemeIcon('circle-outline', new vscode.ThemeColor('charts.red'));
@@ -582,11 +622,12 @@ class PodmanItem extends vscode.TreeItem {
                 return new vscode.ThemeIcon('database');
             case 'network':
                 return new vscode.ThemeIcon('globe');
-            case 'compose-group':
-                return new vscode.ThemeIcon('layers');
+            case 'pod':
+                return new vscode.ThemeIcon('symbol-namespace');
             default:
                 return undefined;
         }
+    
     }
 
 
