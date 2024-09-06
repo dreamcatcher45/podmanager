@@ -260,9 +260,17 @@ async function checkPodmanMachineStatus(): Promise<boolean> {
 
 async function runComposeCommand(command: string, uri?: vscode.Uri, composeProject?: string) {
     let composeFile: string | undefined;
+    let projectName: string | undefined;
 
     if (uri) {
         composeFile = uri.fsPath;
+        const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+        if (workspaceFolder) {
+            const relativePath = path.relative(workspaceFolder.uri.fsPath, composeFile);
+            const folderName = path.basename(workspaceFolder.uri.fsPath);
+            const fileName = path.basename(composeFile, path.extname(composeFile));
+            projectName = `${folderName}_${fileName}`;
+        }
     } else if (composeProject) {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders) {
@@ -277,6 +285,8 @@ async function runComposeCommand(command: string, uri?: vscode.Uri, composeProje
             const filePath = path.join(rootPath, fileName);
             if (fs.existsSync(filePath)) {
                 composeFile = filePath;
+                const folderName = path.basename(rootPath);
+                projectName = `${folderName}_${path.basename(filePath, path.extname(filePath))}`;
                 break;
             }
         }
@@ -293,6 +303,9 @@ async function runComposeCommand(command: string, uri?: vscode.Uri, composeProje
         let cmd = `podman-compose`;
         if (composeFile) {
             cmd += ` -f "${composeFile}"`;
+        }
+        if (projectName) {
+            cmd += ` -p "${projectName}"`;
         } else if (composeProject) {
             cmd += ` -p "${composeProject}"`;
         }
@@ -307,6 +320,7 @@ async function runComposeCommand(command: string, uri?: vscode.Uri, composeProje
         vscode.window.showErrorMessage(`Failed to execute Podman Compose ${command}: ${error}`);
     }
 }
+
 
 class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<PodmanItem | undefined | null | void> = new vscode.EventEmitter<PodmanItem | undefined | null | void>();
@@ -454,21 +468,6 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
         }
     }
     
-    // private extractComposeProject(labels: string): string {
-    //     const projectLabel = labels.split(',').find(label => label.startsWith('com.docker.compose.project='));
-    //     return projectLabel ? projectLabel.split('=')[1] : 'Unknown Project';
-    // }
-
-    // private groupComposeContainers(containers: any[]): { [key: string]: any[] } {
-    //     return containers.reduce((groups: { [key: string]: any[] }, container) => {
-    //         const project = container.composeProject;
-    //         if (!groups[project]) {
-    //             groups[project] = [];
-    //         }
-    //         groups[project].push(container);
-    //         return groups;
-    //     }, {});
-    // }
 
     //get compose group
     private async getComposeGroups(): Promise<PodmanItem[]> {
