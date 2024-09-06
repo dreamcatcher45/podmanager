@@ -167,36 +167,10 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     // Updated Compose commands
-    // const composeUpCommand = vscode.commands.registerCommand('podmanager.composeUp', async (uri?: vscode.Uri) => {
-    //     await runComposeCommand('up -d', uri);
-    //     podmanTreeDataProvider.refresh();
-    // });
-
-    // const composeStartCommand = vscode.commands.registerCommand('podmanager.composeStart', async (item: PodmanItem) => {
-    //     await runComposeCommand('start', undefined, item.composeProject);
-    //     podmanTreeDataProvider.refresh();
-    // });
-
-    // const composeStopCommand = vscode.commands.registerCommand('podmanager.composeStop', async (item: PodmanItem) => {
-    //     await runComposeCommand('stop', undefined, item.composeProject);
-    //     podmanTreeDataProvider.refresh();
-    // });
-
-    // const composeRestartCommand = vscode.commands.registerCommand('podmanager.composeRestart', async (item: PodmanItem) => {
-    //     await runComposeCommand('restart', undefined, item.composeProject);
-    //     podmanTreeDataProvider.refresh();
-    // });
-
-    // const composeDownCommand = vscode.commands.registerCommand('podmanager.composeDown', async (item: PodmanItem) => {
-    //     const answer = await vscode.window.showWarningMessage(
-    //         `Are you sure you want to stop and remove all compose containers for ${item.composeProject}?`,
-    //         'Yes', 'No'
-    //     );
-    //     if (answer === 'Yes') {
-    //         await runComposeCommand('down', undefined, item.composeProject);
-    //         podmanTreeDataProvider.refresh();
-    //     }
-    // });
+    const composeUpCommand = vscode.commands.registerCommand('podmanager.composeUp', async (uri?: vscode.Uri) => {
+        await runComposeCommand('up -d', uri);
+        podmanTreeDataProvider.refresh();
+    });
 
 
       // Add new pod-related commands
@@ -401,11 +375,11 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
         if (!element) {
             return [
                 new PodmanItem('Containers', vscode.TreeItemCollapsibleState.Collapsed, 'containers'),
+                new PodmanItem('Pods', vscode.TreeItemCollapsibleState.Collapsed, 'pods'),
                 new PodmanItem('Images', vscode.TreeItemCollapsibleState.Collapsed, 'images'),
                 new PodmanItem('Volumes', vscode.TreeItemCollapsibleState.Collapsed, 'volumes'),
                 new PodmanItem('Networks', vscode.TreeItemCollapsibleState.Collapsed, 'networks'),
                 new PodmanItem('Overview', vscode.TreeItemCollapsibleState.Collapsed, 'overview'),
-                new PodmanItem('Pods', vscode.TreeItemCollapsibleState.Collapsed, 'pods'),
             ];
         }
 
