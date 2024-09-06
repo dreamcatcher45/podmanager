@@ -154,6 +154,26 @@
       {
         "command": "podmanager.pruneBuilderCache",
         "title": "Prune Builder Cache"
+      },
+      {
+        "command": "podmanager.startPod",
+        "title": "Start Pod",
+        "icon": "$(play)"
+      },
+      {
+        "command": "podmanager.stopPod",
+        "title": "Stop Pod",
+        "icon": "$(stop)"
+      },
+      {
+        "command": "podmanager.restartPod",
+        "title": "Restart Pod",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "podmanager.deletePod",
+        "title": "Delete Pod",
+        "icon": "$(trash)"
       }
     ],
     "menus": {
@@ -263,6 +283,26 @@
         {
           "command": "podmanager.refreshOverview",
           "when": "view == podmanView && viewItem == overview",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.startPod",
+          "when": "view == podmanView && viewItem == pod",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.stopPod",
+          "when": "view == podmanView && viewItem == pod",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.restartPod",
+          "when": "view == podmanView && viewItem == pod",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.deletePod",
+          "when": "view == podmanView && viewItem == pod",
           "group": "inline"
         }
       ],
