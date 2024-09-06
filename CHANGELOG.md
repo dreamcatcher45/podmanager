@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.1.4] - 2024-09-6
+### Added
+- Migrated `Compose Group` as `Pods`
+- Pod operations
+- Distinct Pod sections for each compose up procedure
 
 ## [0.1.3] - 2024-09-1
 ### Added
