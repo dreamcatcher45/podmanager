@@ -6,6 +6,19 @@ import * as path from 'path';
 
 const execAsync = promisify(exec);
 
+// Function to get the podman executable path
+function getPodmanPath(): string {
+    const config = vscode.workspace.getConfiguration('podmanager');
+    return config.get('podmanPath', 'podman');
+}
+
+// Function to reset podman path to default
+async function resetPodmanPath() {
+    const config = vscode.workspace.getConfiguration('podmanager');
+    await config.update('podmanPath', undefined, vscode.ConfigurationTarget.Global);
+    vscode.window.showInformationMessage('Podman path has been reset to default.');
+}
+
 export function activate(context: vscode.ExtensionContext) {
     console.log('Podmanager extension is now active!');
 
@@ -17,18 +30,17 @@ export function activate(context: vscode.ExtensionContext) {
         podmanTreeDataProvider.refresh();
     });
 
-    // overview support 
     const refreshOverviewCommand = vscode.commands.registerCommand('podmanager.refreshOverview', () => {
         podmanTreeDataProvider.refreshOverview();
     });
 
-    //additional utitilities option
     const openToolsMenuCommand = vscode.commands.registerCommand('podmanager.openToolsMenu', async () => {
         const selected = await vscode.window.showQuickPick(
             [
                 { label: 'Prune Dangling Images', command: 'podmanager.pruneImages' },
                 { label: 'Prune All Unused Images', command: 'podmanager.pruneAllImages' },
-                { label: 'Prune Builder Cache', command: 'podmanager.pruneBuilderCache' }
+                { label: 'Prune Builder Cache', command: 'podmanager.pruneBuilderCache' },
+                { label: 'Reset Podman Path to Default', command: 'podmanager.resetPodmanPath' }
             ],
             { placeHolder: 'Select a Podman tool' }
         );
@@ -38,18 +50,19 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    const resetPodmanPathCommand = vscode.commands.registerCommand('podmanager.resetPodmanPath', resetPodmanPath);
+
     const pruneImagesCommand = vscode.commands.registerCommand('podmanager.pruneImages', async () => {
-        await runPruneCommand('podman image prune -f', 'Remove all dangling images');
+        await runPruneCommand(`${getPodmanPath()} image prune -f`, 'Remove all dangling images');
     });
 
     const pruneAllImagesCommand = vscode.commands.registerCommand('podmanager.pruneAllImages', async () => {
-        await runPruneCommand('podman image prune -a -f', 'Remove all unused images');
+        await runPruneCommand(`${getPodmanPath()} image prune -a -f`, 'Remove all unused images');
     });
 
     const pruneBuilderCacheCommand = vscode.commands.registerCommand('podmanager.pruneBuilderCache', async () => {
-        await runPruneCommand('podman builder prune -a -f', 'Remove Podman builder cache');
+        await runPruneCommand(`${getPodmanPath()} builder prune -a -f`, 'Remove Podman builder cache');
     });
-
 
     const startPodmanMachineCommand = vscode.commands.registerCommand('podmanager.startPodmanMachine', async () => {
         try {
@@ -62,7 +75,7 @@ export function activate(context: vscode.ExtensionContext) {
                     'Yes', 'No'
                 );
                 if (answer === 'Yes') {
-                    await execAsync('podman machine start');
+                    await execAsync(`${getPodmanPath()} machine start`);
                     vscode.window.showInformationMessage('Podman machine started successfully');
                     podmanTreeDataProvider.refresh();
                 }
@@ -76,7 +89,7 @@ export function activate(context: vscode.ExtensionContext) {
         const answer = await vscode.window.showWarningMessage(`Are you sure you want to delete container ${item.id}?`, 'Yes', 'No');
         if (answer === 'Yes') {
             try {
-                await execAsync(`podman container rm -f ${item.id}`);
+                await execAsync(`${getPodmanPath()} container rm -f ${item.id}`);
                 vscode.window.showInformationMessage(`Container ${item.id} deleted successfully`);
                 podmanTreeDataProvider.refresh();
             } catch (error) {
@@ -89,7 +102,7 @@ export function activate(context: vscode.ExtensionContext) {
         const answer = await vscode.window.showWarningMessage(`Are you sure you want to delete image ${item.id}?`, 'Yes', 'No');
         if (answer === 'Yes') {
             try {
-                await execAsync(`podman image rm -f ${item.id}`);
+                await execAsync(`${getPodmanPath()} image rm -f ${item.id}`);
                 vscode.window.showInformationMessage(`Image ${item.id} deleted successfully`);
                 podmanTreeDataProvider.refresh();
             } catch (error) {
@@ -102,7 +115,7 @@ export function activate(context: vscode.ExtensionContext) {
         const answer = await vscode.window.showWarningMessage(`Are you sure you want to delete volume ${item.id}?`, 'Yes', 'No');
         if (answer === 'Yes') {
             try {
-                await execAsync(`podman volume rm -f ${item.id}`);
+                await execAsync(`${getPodmanPath()} volume rm -f ${item.id}`);
                 vscode.window.showInformationMessage(`Volume ${item.id} deleted successfully`);
                 podmanTreeDataProvider.refresh();
             } catch (error) {
@@ -115,7 +128,7 @@ export function activate(context: vscode.ExtensionContext) {
         const answer = await vscode.window.showWarningMessage(`Are you sure you want to delete network ${item.id}?`, 'Yes', 'No');
         if (answer === 'Yes') {
             try {
-                await execAsync(`podman network rm -f ${item.id}`);
+                await execAsync(`${getPodmanPath()} network rm -f ${item.id}`);
                 vscode.window.showInformationMessage(`Network ${item.id} deleted successfully`);
                 podmanTreeDataProvider.refresh();
             } catch (error) {
@@ -126,7 +139,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     const startContainerCommand = vscode.commands.registerCommand('podmanager.startContainer', async (item: PodmanItem) => {
         try {
-            await execAsync(`podman container start ${item.id}`);
+            await execAsync(`${getPodmanPath()} container start ${item.id}`);
             vscode.window.showInformationMessage(`Container ${item.id} started successfully`);
             podmanTreeDataProvider.refresh();
         } catch (error) {
@@ -136,7 +149,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     const stopContainerCommand = vscode.commands.registerCommand('podmanager.stopContainer', async (item: PodmanItem) => {
         try {
-            await execAsync(`podman container stop ${item.id}`);
+            await execAsync(`${getPodmanPath()} container stop ${item.id}`);
             vscode.window.showInformationMessage(`Container ${item.id} stopped successfully`);
             podmanTreeDataProvider.refresh();
         } catch (error) {
@@ -146,7 +159,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     const restartContainerCommand = vscode.commands.registerCommand('podmanager.restartContainer', async (item: PodmanItem) => {
         try {
-            await execAsync(`podman container restart ${item.id}`);
+            await execAsync(`${getPodmanPath()} container restart ${item.id}`);
             vscode.window.showInformationMessage(`Container ${item.id} restarted successfully`);
             podmanTreeDataProvider.refresh();
         } catch (error) {
@@ -158,7 +171,7 @@ export function activate(context: vscode.ExtensionContext) {
         if (item.id) {
             try {
                 const terminal = vscode.window.createTerminal(`Podman: ${item.label}`);
-                terminal.sendText(`podman exec -it ${item.id} /bin/sh`);
+                terminal.sendText(`${getPodmanPath()} exec -it ${item.id} /bin/sh`);
                 terminal.show();
             } catch (error) {
                 vscode.window.showErrorMessage(`Failed to open terminal for container ${item.id}: ${error}`);
@@ -166,15 +179,12 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    // Updated Compose commands
     const composeUpCommand = vscode.commands.registerCommand('podmanager.composeUp', async (uri?: vscode.Uri) => {
         await runComposeCommand('up -d', uri);
         podmanTreeDataProvider.refresh();
     });
 
-
-      // Add new pod-related commands
-      const startPodCommand = vscode.commands.registerCommand('podmanager.startPod', async (item: PodmanItem) => {
+    const startPodCommand = vscode.commands.registerCommand('podmanager.startPod', async (item: PodmanItem) => {
         await runPodCommand('start', item.id!);
         podmanTreeDataProvider.refresh();
     });
@@ -219,12 +229,12 @@ export function activate(context: vscode.ExtensionContext) {
         openToolsMenuCommand,
         pruneImagesCommand,
         pruneAllImagesCommand,
-        pruneBuilderCacheCommand
+        pruneBuilderCacheCommand,
+        resetPodmanPathCommand
     );
 
     checkPodmanMachineStatus();
 }
-
 
 async function runPruneCommand(command: string, description: string): Promise<void> {
     const answer = await vscode.window.showWarningMessage(
@@ -249,7 +259,7 @@ async function runPruneCommand(command: string, description: string): Promise<vo
 
 async function checkPodmanMachineStatus(): Promise<boolean> {
     try {
-        const { stdout } = await execAsync('podman machine list --format "{{.Name}}|{{.Running}}"');
+        const { stdout } = await execAsync(`${getPodmanPath()} machine list --format "{{.Name}}|{{.Running}}"`);
         const machines = stdout.split('\n').filter(line => line.trim() !== '');
         const runningMachine = machines.find(machine => machine.split('|')[1] === 'Running');
         return !!runningMachine;
@@ -301,7 +311,7 @@ async function runComposeCommand(command: string, uri?: vscode.Uri, composeProje
     vscode.window.showInformationMessage(`Starting Podman Compose ${command}...`);
 
     try {
-        let cmd = `podman-compose`;
+        let cmd = `${getPodmanPath()}-compose`;
         if (composeFile) {
             cmd += ` -f "${composeFile}"`;
         }
@@ -325,7 +335,7 @@ async function runComposeCommand(command: string, uri?: vscode.Uri, composeProje
 async function runPodCommand(command: string, podId: string, force: boolean = false) {
     try {
         const forceFlag = force ? ' -f' : '';
-        const { stdout, stderr } = await execAsync(`podman pod ${command}${forceFlag} ${podId}`);
+        const { stdout, stderr } = await execAsync(`${getPodmanPath()} pod ${command}${forceFlag} ${podId}`);
         vscode.window.showInformationMessage(`Pod ${command} executed successfully`);
         if (stderr) {
             vscode.window.showWarningMessage(`Pod ${command} completed with warnings: ${stderr}`);
@@ -353,13 +363,13 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
         }, 300);
     }
 
-    //overview support
     constructor() {
         this.refreshOverview();
     }
+
     async refreshOverview(): Promise<void> {
         try {
-            const { stdout } = await execAsync('podman system df');
+            const { stdout } = await execAsync(`${getPodmanPath()} system df`);
             this.overviewData = stdout;
             this.refresh();
         } catch (error) {
@@ -407,7 +417,7 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
 
     private async getPods(): Promise<PodmanItem[]> {
         try {
-            const { stdout } = await execAsync('podman pod ps --format "{{.Name}}|{{.Status}}|{{.Created}}|{{.Id}}"');
+            const { stdout } = await execAsync(`${getPodmanPath()} pod ps --format "{{.Name}}|{{.Status}}|{{.Created}}|{{.Id}}"`);
             return stdout.split('\n')
                 .filter(line => line.trim() !== '')
                 .map(line => {
@@ -428,7 +438,7 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
 
     private async getPodContainers(podName: string): Promise<PodmanItem[]> {
         try {
-            const { stdout } = await execAsync(`podman ps --filter "pod=${podName}" --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.CreatedAt}}"`);
+            const { stdout } = await execAsync(`${getPodmanPath()} ps --filter "pod=${podName}" --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.CreatedAt}}"`);
             return stdout.split('\n')
                 .filter(line => line.trim() !== '')
                 .map(line => {
@@ -447,17 +457,17 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
             return [];
         }
     }
+
     private getOverviewItems(): PodmanItem[] {
         const lines = this.overviewData.split('\n');
         return lines
-            .filter(line => line.trim() !== '') // Filter out empty lines
+            .filter(line => line.trim() !== '')
             .map(line => new PodmanItem(line, vscode.TreeItemCollapsibleState.None, 'overview-item'));
     }
 
     private async getImages(): Promise<PodmanItem[]> {
         try {
-            // Get all images
-            const { stdout: imageStdout } = await execAsync('podman image ls --format "{{.ID}}|{{.Repository}}|{{.Tag}}"');
+            const { stdout: imageStdout } = await execAsync(`${getPodmanPath()} image ls --format "{{.ID}}|{{.Repository}}|{{.Tag}}"`);
             const imageMap = new Map<string, string[]>();
     
             imageStdout.split('\n')
@@ -470,8 +480,7 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
                     imageMap.get(id)!.push(`${repository}:${tag}`);
                 });
     
-            // Get all containers to check which images are in use
-            const { stdout: containerStdout } = await execAsync('podman container ls -a --format "{{.ImageID}}"');
+            const { stdout: containerStdout } = await execAsync(`${getPodmanPath()} container ls -a --format "{{.ImageID}}"`);
             const usedImageIds = new Set(containerStdout.split('\n').filter(line => line.trim() !== ''));
     
             return Array.from(imageMap.entries()).map(([id, names]) => {
@@ -502,7 +511,7 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
 
     private async getContainers(): Promise<PodmanItem[]> {
         try {
-            const { stdout: containerStdout } = await execAsync('podman container ls -a --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Labels}}"');
+            const { stdout: containerStdout } = await execAsync(`${getPodmanPath()} container ls -a --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Labels}}"`);
             const containers = containerStdout.split('\n')
                 .filter(line => line.trim() !== '')
                 .map(line => {
@@ -513,21 +522,22 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
                     return { id, name, status, isRunning, isCompose, composeProject };
                 });
 
-            return containers
+            const nonComposeContainers = containers
                 .filter(c => !c.isCompose)
                 .map(c => new PodmanItem(`${c.name} (${c.id})`, vscode.TreeItemCollapsibleState.None, 'container', c.id, c.status, c.isRunning));
+
+            const composeGroups = await this.getComposeGroups();
+
+            return [...nonComposeContainers, ...composeGroups];
         } catch (error) {
             vscode.window.showErrorMessage('Failed to get containers: ' + error);
             return [];
         }
     }
-    
-    
 
-    //get compose group
     private async getComposeGroups(): Promise<PodmanItem[]> {
         try {
-            const { stdout: containerStdout } = await execAsync('podman container ls -a --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Labels}}"');
+            const { stdout: containerStdout } = await execAsync(`${getPodmanPath()} container ls -a --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Labels}}"`);
             const composeContainers = containerStdout.split('\n')
                 .filter(line => line.trim() !== '')
                 .map(line => {
@@ -570,10 +580,9 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
         }, {});
     }
 
-
     private async getVolumes(): Promise<PodmanItem[]> {
         try {
-            const { stdout } = await execAsync('podman volume ls --format "{{.Name}}|{{.Driver}}"');
+            const { stdout } = await execAsync(`${getPodmanPath()} volume ls --format "{{.Name}}|{{.Driver}}"`);
             return stdout.split('\n')
                 .filter(line => line.trim() !== '')
                 .map(line => {
@@ -588,7 +597,7 @@ class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
 
     private async getNetworks(): Promise<PodmanItem[]> {
         try {
-            const { stdout } = await execAsync('podman network ls --format "{{.Name}}|{{.Driver}}"');
+            const { stdout } = await execAsync(`${getPodmanPath()} network ls --format "{{.Name}}|{{.Driver}}"`);
             return stdout.split('\n')
                 .filter(line => line.trim() !== '')
                 .map(line => {
@@ -626,6 +635,7 @@ class PodmanItem extends vscode.TreeItem {
             case 'pod':
                 return new vscode.ThemeIcon('symbol-namespace', new vscode.ThemeColor(this.status?.toLowerCase().includes('running') ? 'charts.green' : 'charts.red'));
             case 'container':
+            case 'compose-container':
                 return this.isRunning
                     ? new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.green'))
                     : new vscode.ThemeIcon('circle-outline', new vscode.ThemeColor('charts.red'));
@@ -638,14 +648,12 @@ class PodmanItem extends vscode.TreeItem {
                 return new vscode.ThemeIcon('database');
             case 'network':
                 return new vscode.ThemeIcon('globe');
-            case 'pod':
-                return new vscode.ThemeIcon('symbol-namespace');
+            case 'compose-group':
+                return new vscode.ThemeIcon('layers');
             default:
                 return undefined;
         }
-    
     }
-
 
     private getTooltip(): string | undefined {
         if (this.contextValue === 'pod') {
@@ -657,6 +665,8 @@ class PodmanItem extends vscode.TreeItem {
             return `ID: ${this.id}\nUsed: ${this.isUsed ? 'Yes' : 'No'}`;
         } else if (this.contextValue === 'image-tag') {
             return `ID: ${this.id}\nTag: ${this.label}`;
+        } else if (this.contextValue === 'compose-group') {
+            return `Compose Project: ${this.composeProject}`;
         }
         return undefined;
     }

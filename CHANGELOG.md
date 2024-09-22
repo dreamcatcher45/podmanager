@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.1.6] - 2024-09-22
+### Added
+- Added custom path configuration in the settings
+
 ## [0.1.4] - 2024-09-6
 ### Added
 - Migrated `Compose Group` as `Pods`
