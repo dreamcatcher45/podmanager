@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.1.6] - 2024-09-22
+## [0.1.7] - 2024-09-22
 ### Added
 - Added custom path configuration in the settings
 
