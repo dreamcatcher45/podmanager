@@ -10,6 +10,8 @@ function getPodmanPath(): string {
     return config.get('podmanPath', 'podman');
 }
 
+
+
 export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<PodmanItem | undefined | null | void> = new vscode.EventEmitter<PodmanItem | undefined | null | void>();
     readonly onDidChangeTreeData: vscode.Event<PodmanItem | undefined | null | void> = this._onDidChangeTreeData.event;
@@ -30,6 +32,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
             this.refreshTimeout = null;
         }, 300);
     }
+    
 
     async refreshOverview(): Promise<void> {
         try {
@@ -41,6 +44,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
         }
     }
 
+    
     getTreeItem(element: PodmanItem): vscode.TreeItem {
         return element;
     }
@@ -130,17 +134,19 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
 
     private async getImages(): Promise<PodmanItem[]> {
         try {
-            const { stdout: imageStdout } = await execAsync(`${getPodmanPath()} image ls --format "{{.ID}}|{{.Repository}}|{{.Tag}}"`);
+            const { stdout } = await execAsync(`${getPodmanPath()} image ls --format "{{.ID}}|{{.Repository}}|{{.Tag}}"`);
             const imageMap = new Map<string, string[]>();
     
-            imageStdout.split('\n')
+            stdout.split('\n')
                 .filter(line => line.trim() !== '')
                 .forEach(line => {
                     const [id, repository, tag] = line.split('|');
-                    if (!imageMap.has(id)) {
-                        imageMap.set(id, []);
+                    if (repository !== "<none>" && tag !== "<none>") {
+                        if (!imageMap.has(id)) {
+                            imageMap.set(id, []);
+                        }
+                        imageMap.get(id)!.push(`${repository}:${tag}`);
                     }
-                    imageMap.get(id)!.push(`${repository}:${tag}`);
                 });
     
             const { stdout: containerStdout } = await execAsync(`${getPodmanPath()} container ls -a --format "{{.ImageID}}"`);
@@ -149,8 +155,8 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
             return Array.from(imageMap.entries()).map(([id, names]) => {
                 const isUsed = usedImageIds.has(id);
                 const label = names.length > 1 
-                    ? `Image: ${id} (${names.length} tags)`
-                    : `Image: ${id} (${names[0]})`;
+                    ? `${id} (${names.length} tags)`
+                    : `${names[0]} (${id})`;
                 const children = names.map((name, index) => 
                     new PodmanItem(name, vscode.TreeItemCollapsibleState.None, 'image-tag', `${id}-tag-${index}`, id)
                 );
@@ -172,6 +178,8 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
         }
     }
 
+
+    
     private async getVolumes(): Promise<PodmanItem[]> {
         try {
             const { stdout } = await execAsync(`${getPodmanPath()} volume ls --format "{{.Name}}|{{.Driver}}"`);
@@ -186,6 +194,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
             return [];
         }
     }
+    
 
     private async getNetworks(): Promise<PodmanItem[]> {
         try {

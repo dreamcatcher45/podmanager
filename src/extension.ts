@@ -5,6 +5,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { PodmanTreeDataProvider } from './podmanTreeDataProvider';
 import { PodmanItem } from './podmanItem';
+import { createContainer } from './createContainer';
+
 
 const execAsync = promisify(exec);
 
@@ -48,6 +50,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('podmanager.stopPod', stopPod),
         vscode.commands.registerCommand('podmanager.restartPod', restartPod),
         vscode.commands.registerCommand('podmanager.deletePod', deletePod),
+        vscode.commands.registerCommand('podmanager.createContainer', createContainer),
     ];
 
     context.subscriptions.push(...commands);
@@ -58,6 +61,7 @@ export function activate(context: vscode.ExtensionContext) {
 async function openToolsMenu() {
     const selected = await vscode.window.showQuickPick(
         [
+            { label: 'Create Container', command: 'podmanager.createContainer' },
             { label: 'Prune Dangling Images', command: 'podmanager.pruneImages' },
             { label: 'Prune All Unused Images', command: 'podmanager.pruneAllImages' },
             { label: 'Prune Builder Cache', command: 'podmanager.pruneBuilderCache' },
