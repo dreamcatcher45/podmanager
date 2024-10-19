@@ -10,6 +10,11 @@ interface ImageInfo {
     id: string;
 }
 
+interface VolumeInfo {
+    name: string;
+    mountPoint: string;
+}
+
 function getPodmanPath(): string {
     const config = vscode.workspace.getConfiguration('podmanager');
     return config.get('podmanPath', 'podman');
@@ -38,7 +43,7 @@ export async function createContainer() {
 
         const name = await vscode.window.showInputBox({ prompt: 'Enter container name (optional)' });
 
-        let command = `${getPodmanPath()} run -d`; // Added -d to run in detached mode
+        let command = `${getPodmanPath()} run -d`;
         if (name) {
             command += ` --name ${name}`;
         }
@@ -50,9 +55,27 @@ export async function createContainer() {
             }
         } else if (mode === 'Advanced') {
             const volumes = await getVolumes();
-            const selectedVolume = await vscode.window.showQuickPick(volumes, { placeHolder: 'Select a volume (optional)' });
-            if (selectedVolume) {
-                command += ` -v ${selectedVolume}`;
+            if (volumes.length > 0) {
+                const selectedVolume = await vscode.window.showQuickPick(
+                    volumes.map(vol => ({
+                        label: vol.name,
+                        description: vol.mountPoint,
+                        volume: vol
+                    })),
+                    { placeHolder: 'Select a volume (optional)' }
+                );
+
+                if (selectedVolume) {
+                    // Ask for container mount point
+                    const containerPath = await vscode.window.showInputBox({ 
+                        prompt: 'Enter container mount point (e.g., /app/data)',
+                        placeHolder: '/app/data'
+                    });
+
+                    if (containerPath) {
+                        command += ` -v ${selectedVolume.volume.name}:${containerPath}`;
+                    }
+                }
             }
 
             const networks = await getNetworks();
@@ -78,14 +101,8 @@ export async function createContainer() {
             if (memoryLimit) {
                 command += ` -m ${memoryLimit}`;
             }
-
-            const securityOpt = await vscode.window.showInputBox({ prompt: 'Enter security options (e.g., no-new-privileges, leave empty for default)' });
-            if (securityOpt) {
-                command += ` --security-opt ${securityOpt}`;
-            }
         }
 
-        // Use the full image name without the ID and add tail -f /dev/null command
         command += ` ${selectedImageInfo.imageInfo.repository}:${selectedImageInfo.imageInfo.tag} tail -f /dev/null`;
 
         const { stdout, stderr } = await execAsync(command);
@@ -119,10 +136,18 @@ async function getImages(): Promise<ImageInfo[]> {
     }
 }
 
-async function getVolumes(): Promise<string[]> {
+async function getVolumes(): Promise<VolumeInfo[]> {
     try {
-        const { stdout } = await execAsync(`${getPodmanPath()} volume ls --format "{{.Name}}"`);
-        return stdout.split('\n').filter(line => line.trim() !== '');
+        const { stdout } = await execAsync(`${getPodmanPath()} volume ls --format "{{.Name}}|{{.Mountpoint}}"`);
+        return stdout.split('\n')
+            .filter(line => line.trim() !== '')
+            .map(line => {
+                const [name, mountPoint] = line.split('|');
+                return {
+                    name,
+                    mountPoint
+                };
+            });
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to get volumes: ${error}`);
         return [];
