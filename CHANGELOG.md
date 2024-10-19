@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.8] - 2024-10-19
+### Added
+- Added create container tool
+- Simple and advanced mode for container creation
+
+
 ## [0.1.7] - 2024-09-22
 ### Added
 - Added custom path configuration in the settings

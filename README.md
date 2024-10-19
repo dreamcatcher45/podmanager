@@ -4,6 +4,8 @@
 
 Explore more about Podmanager on the [website](https://pod-manager.pages.dev) and [Documentation](https://pod-manager.pages.dev/docs)
 
+If you find this project useful, please consider giving it a star ⭐ on GitHub! Your support helps me continue developing and improving this project.
+
 
 ## Features
 
@@ -57,4 +59,9 @@ Once the extension is installed:
 
 ## Contributing
 
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/dreamcatcher45/podmanager/issues) to report bugs or request features.
+Contributions, issues, and feature requests are welcome! Feel free to check the [Issues page](https://github.com/dreamcatcher45/podmanager/issues) to report bugs or request features.
+
+
+**Sponsorship**
+
+If you're interested in sponsoring 💵 this project, please mention it in the [Discussion ](https://github.com/dreamcatcher45/podmanager/discussions) section on GitHub. Your support can make a significant difference!
