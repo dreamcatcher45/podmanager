@@ -1,8 +1,8 @@
 {
   "name": "podmanager",
   "displayName": "Pod Manager",
-  "description": "Manage Podman containers, images, volumes, and networks.(unofficial)",
-  "version": "0.1.8",
+  "description": "Manage Podman containers, images, volumes, and networks.",
+  "version": "0.1.9",
   "publisher": "dreamcatcher45",
   "homepage": "https://pod-manager.pages.dev",
   "repository": {

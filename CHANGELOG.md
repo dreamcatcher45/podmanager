@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.9] - 2024-10-20
+### Added
+- Added create volume tool
+- Added create network tool
+- new collapse option
+- build image option for dockerfiles
+
 ## [0.1.8] - 2024-10-19
 ### Added
 - Added create container tool
