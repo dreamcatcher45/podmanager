@@ -61,7 +61,8 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('podmanager.deletePod', deletePod),
         vscode.commands.registerCommand('podmanager.createContainer', createContainer),
         vscode.commands.registerCommand('podmanager.createVolume', createVolume),
-        vscode.commands.registerCommand('podmanager.createNetwork', createNetwork)
+        vscode.commands.registerCommand('podmanager.createNetwork', createNetwork),
+        vscode.commands.registerCommand('podmanager.buildImage', buildImage)
     ];
 
     context.subscriptions.push(...commands);
@@ -85,6 +86,46 @@ async function openToolsMenu() {
 
     if (selected) {
         vscode.commands.executeCommand(selected.command);
+    }
+}
+
+async function buildImage(uri: vscode.Uri) {
+    const dockerfilePath = uri.fsPath;
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+
+    if (!workspaceFolder) {
+        vscode.window.showErrorMessage('Unable to determine workspace folder');
+        return;
+    }
+
+    const imageName = await vscode.window.showInputBox({
+        prompt: 'Enter a name for the image',
+        placeHolder: 'e.g., myapp:latest'
+    });
+
+    if (!imageName) {
+        vscode.window.showInformationMessage('Image build cancelled');
+        return;
+    }
+
+    const buildContext = path.dirname(dockerfilePath);
+
+    vscode.window.showInformationMessage(`Building image ${imageName}...`);
+
+    try {
+        const cmd = `${getPodmanPath()} build -t ${imageName} -f "${dockerfilePath}" "${buildContext}"`;
+        const { stdout, stderr } = await execAsync(cmd);
+
+        if (stderr) {
+            vscode.window.showWarningMessage(`Image build completed with warnings: ${stderr}`);
+        } else {
+            vscode.window.showInformationMessage(`Image ${imageName} built successfully`);
+        }
+
+        // Refresh the Podman view to show the new image
+        vscode.commands.executeCommand('podmanager.refreshView');
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to build image: ${error}`);
     }
 }
 

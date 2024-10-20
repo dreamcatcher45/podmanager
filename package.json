@@ -192,6 +192,10 @@
       "command": "podmanager.collapseAll",
       "title": "Collapse All",
       "icon": "$(collapse-all)"
+    },
+    {
+      "command": "podmanager.buildImage",
+      "title": "Podman: Build Image"
     }
     ],
     "menus": {
@@ -334,6 +338,11 @@
         {
           "command": "podmanager.composeUp",
           "when": "resourceExtname == .yml || resourceExtname == .yaml",
+          "group": "2_workspace"
+        },
+        {
+          "command": "podmanager.buildImage",
+          "when": "resourceFilename == Dockerfile",
           "group": "2_workspace"
         }
       ]
