@@ -29,6 +29,14 @@ export function activate(context: vscode.ExtensionContext) {
     const treeView = vscode.window.createTreeView('podmanView', { treeDataProvider: podmanTreeDataProvider });
     context.subscriptions.push(treeView);
 
+    const collapseAllCommand = vscode.commands.registerCommand('podmanager.collapseAll', () => {
+        if (treeView.visible) {
+            // Collapse all expandable elements
+            vscode.commands.executeCommand('workbench.actions.treeView.podmanView.collapseAll');
+        }
+    });
+    context.subscriptions.push(collapseAllCommand);
+
     const commands = [
         vscode.commands.registerCommand('podmanager.refreshView', () => podmanTreeDataProvider.refresh()),
         vscode.commands.registerCommand('podmanager.refreshOverview', () => podmanTreeDataProvider.refreshOverview()),

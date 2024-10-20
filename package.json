@@ -187,10 +187,21 @@
     {
         "command": "podmanager.createNetwork",
         "title": "Podman: Create Network"
+    },
+    {
+      "command": "podmanager.collapseAll",
+      "title": "Collapse All",
+      "icon": "$(collapse-all)"
     }
     ],
     "menus": {
       "view/title": [
+        
+        {
+          "command": "podmanager.collapseAll",
+          "when": "view == podmanView",
+          "group": "navigation"
+        },
         {
           "command": "podmanager.refreshView",
           "when": "view == podmanView",
@@ -203,11 +214,6 @@
         },
         {
           "command": "podmanager.openToolsMenu",
-          "when": "view == podmanView",
-          "group": "navigation"
-        },
-        {
-          "command": "podmanager.createContainer",
           "when": "view == podmanView",
           "group": "navigation"
         }
