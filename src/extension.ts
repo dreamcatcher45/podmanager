@@ -6,6 +6,7 @@ import * as path from 'path';
 import { PodmanTreeDataProvider } from './podmanTreeDataProvider';
 import { PodmanItem } from './podmanItem';
 import { createContainer } from './createContainer';
+import { createVolume, createNetwork } from './createResource';
 
 
 const execAsync = promisify(exec);
@@ -51,6 +52,8 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('podmanager.restartPod', restartPod),
         vscode.commands.registerCommand('podmanager.deletePod', deletePod),
         vscode.commands.registerCommand('podmanager.createContainer', createContainer),
+        vscode.commands.registerCommand('podmanager.createVolume', createVolume),
+        vscode.commands.registerCommand('podmanager.createNetwork', createNetwork)
     ];
 
     context.subscriptions.push(...commands);
@@ -62,6 +65,8 @@ async function openToolsMenu() {
     const selected = await vscode.window.showQuickPick(
         [
             { label: 'Create Container', command: 'podmanager.createContainer' },
+            { label: 'Create Volume', command: 'podmanager.createVolume' },
+            { label: 'Create Network', command: 'podmanager.createNetwork' },
             { label: 'Prune Dangling Images', command: 'podmanager.pruneImages' },
             { label: 'Prune All Unused Images', command: 'podmanager.pruneAllImages' },
             { label: 'Prune Builder Cache', command: 'podmanager.pruneBuilderCache' },
@@ -180,25 +185,37 @@ async function deleteImage(item: PodmanItem) {
 }
 
 async function deleteVolume(item: PodmanItem) {
-    const answer = await vscode.window.showWarningMessage(`Are you sure you want to delete volume ${item.id}?`, 'Yes', 'No');
+    if (!item.resourceName) {
+        vscode.window.showErrorMessage('Unable to delete volume: Resource name is missing');
+        return;
+    }
+    const answer = await vscode.window.showWarningMessage(`Are you sure you want to delete volume ${item.resourceName}?`, 'Yes', 'No');
     if (answer === 'Yes') {
         try {
-            await execAsync(`${getPodmanPath()} volume rm -f ${item.id}`);
-            vscode.window.showInformationMessage(`Volume ${item.id} deleted successfully`);
+            await execAsync(`${getPodmanPath()} volume rm -f ${item.resourceName}`);
+            vscode.window.showInformationMessage(`Volume ${item.resourceName} deleted successfully`);
+            // Refresh the tree view
+            vscode.commands.executeCommand('podmanager.refreshView');
         } catch (error) {
-            vscode.window.showErrorMessage(`Failed to delete volume ${item.id}: ` + error);
+            vscode.window.showErrorMessage(`Failed to delete volume ${item.resourceName}: ` + error);
         }
     }
 }
 
 async function deleteNetwork(item: PodmanItem) {
-    const answer = await vscode.window.showWarningMessage(`Are you sure you want to delete network ${item.id}?`, 'Yes', 'No');
+    if (!item.resourceName) {
+        vscode.window.showErrorMessage('Unable to delete network: Resource name is missing');
+        return;
+    }
+    const answer = await vscode.window.showWarningMessage(`Are you sure you want to delete network ${item.resourceName}?`, 'Yes', 'No');
     if (answer === 'Yes') {
         try {
-            await execAsync(`${getPodmanPath()} network rm -f ${item.id}`);
-            vscode.window.showInformationMessage(`Network ${item.id} deleted successfully`);
+            await execAsync(`${getPodmanPath()} network rm -f ${item.resourceName}`);
+            vscode.window.showInformationMessage(`Network ${item.resourceName} deleted successfully`);
+            // Refresh the tree view
+            vscode.commands.executeCommand('podmanager.refreshView');
         } catch (error) {
-            vscode.window.showErrorMessage(`Failed to delete network ${item.id}: ` + error);
+            vscode.window.showErrorMessage(`Failed to delete network ${item.resourceName}: ` + error);
         }
     }
 }
@@ -312,4 +329,4 @@ async function runPodCommand(command: string, podId: string, force: boolean = fa
     }
 }
 
-export function deactivate() {}
+export function deactivate() { }

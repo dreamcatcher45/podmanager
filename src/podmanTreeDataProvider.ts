@@ -18,6 +18,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
 
     private refreshTimeout: NodeJS.Timeout | null = null;
     private overviewData: string = '';
+    private cache: Map<string, PodmanItem[]> = new Map();
 
     constructor() {
         this.refreshOverview();
@@ -28,11 +29,11 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
             clearTimeout(this.refreshTimeout);
         }
         this.refreshTimeout = setTimeout(() => {
+            this.cache.clear();
             this._onDidChangeTreeData.fire();
             this.refreshTimeout = null;
         }, 300);
     }
-    
 
     async refreshOverview(): Promise<void> {
         try {
@@ -44,7 +45,6 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
         }
     }
 
-    
     getTreeItem(element: PodmanItem): vscode.TreeItem {
         return element;
     }
@@ -54,24 +54,38 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
             return this.getRootItems();
         }
 
+        const cacheKey = element.contextValue;
+        if (this.cache.has(cacheKey)) {
+            return this.cache.get(cacheKey)!;
+        }
+
+        let children: PodmanItem[] = [];
         switch (element.contextValue) {
             case 'containers':
-                return this.getContainers();
+                children = await this.getContainers();
+                break;
             case 'pods':
-                return this.getPods();
+                children = await this.getPods();
+                break;
             case 'images':
-                return this.getImages();
+                children = await this.getImages();
+                break;
             case 'volumes':
-                return this.getVolumes();
+                children = await this.getVolumes();
+                break;
             case 'networks':
-                return this.getNetworks();
+                children = await this.getNetworks();
+                break;
             case 'overview':
-                return this.getOverviewItems();
+                children = this.getOverviewItems();
+                break;
             case 'pod':
-                return this.getPodContainers(element.id!);
-            default:
-                return [];
+                children = await this.getPodContainers(element.id!);
+                break;
         }
+
+        this.cache.set(cacheKey, children);
+        return children;
     }
 
     private getRootItems(): PodmanItem[] {
@@ -187,7 +201,18 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                 .filter(line => line.trim() !== '')
                 .map(line => {
                     const [name, driver] = line.split('|');
-                    return new PodmanItem(`${name} (${driver})`, vscode.TreeItemCollapsibleState.None, 'volume', name);
+                    return new PodmanItem(
+                        `${name} (${driver})`,
+                        vscode.TreeItemCollapsibleState.None,
+                        'volume',
+                        `volume-${name}`,
+                        undefined,
+                        undefined,
+                        undefined,
+                        undefined,
+                        undefined,
+                        name  // Pass the actual volume name as resourceName
+                    );
                 });
         } catch (error) {
             vscode.window.showErrorMessage('Failed to get volumes: ' + error);
@@ -195,7 +220,6 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
         }
     }
     
-
     private async getNetworks(): Promise<PodmanItem[]> {
         try {
             const { stdout } = await execAsync(`${getPodmanPath()} network ls --format "{{.Name}}|{{.Driver}}"`);
@@ -203,7 +227,18 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                 .filter(line => line.trim() !== '')
                 .map(line => {
                     const [name, driver] = line.split('|');
-                    return new PodmanItem(`${name} (${driver})`, vscode.TreeItemCollapsibleState.None, 'network', name);
+                    return new PodmanItem(
+                        `${name} (${driver})`,
+                        vscode.TreeItemCollapsibleState.None,
+                        'network',
+                        `network-${name}`,
+                        undefined,
+                        undefined,
+                        undefined,
+                        undefined,
+                        undefined,
+                        name  // Pass the actual network name as resourceName
+                    );
                 });
         } catch (error) {
             vscode.window.showErrorMessage('Failed to get networks: ' + error);

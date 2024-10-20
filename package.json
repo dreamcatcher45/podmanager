@@ -179,7 +179,15 @@
         "command": "podmanager.createContainer",
         "title": "Create Container",
         "icon": "$(add)"
-      }
+      },
+      {
+        "command": "podmanager.createVolume",
+        "title": "Podman: Create Volume"
+    },
+    {
+        "command": "podmanager.createNetwork",
+        "title": "Podman: Create Network"
+    }
     ],
     "menus": {
       "view/title": [
