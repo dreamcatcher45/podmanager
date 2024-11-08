@@ -8,8 +8,8 @@ import { PodmanItem } from './podmanItem';
 import { createContainer } from './createContainer';
 import { createVolume, createNetwork } from './createResource';
 
-
 const execAsync = promisify(exec);
+const podmanTreeDataProvider = new PodmanTreeDataProvider();
 
 function getPodmanPath(): string {
     const config = vscode.workspace.getConfiguration('podmanager');
@@ -25,7 +25,6 @@ async function resetPodmanPath() {
 export function activate(context: vscode.ExtensionContext) {
     console.log('Podmanager extension is now active!');
 
-    const podmanTreeDataProvider = new PodmanTreeDataProvider();
     const treeView = vscode.window.createTreeView('podmanView', { treeDataProvider: podmanTreeDataProvider });
     context.subscriptions.push(treeView);
 
@@ -55,6 +54,10 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('podmanager.deleteVolume', deleteVolume),
         vscode.commands.registerCommand('podmanager.deleteNetwork', deleteNetwork),
         vscode.commands.registerCommand('podmanager.composeUp', composeUp),
+        vscode.commands.registerCommand('podmanager.composeDown', composeDown),
+        vscode.commands.registerCommand('podmanager.composeStart', composeStart),
+        vscode.commands.registerCommand('podmanager.composeStop', composeStop),
+        vscode.commands.registerCommand('podmanager.composeRestart', composeRestart),
         vscode.commands.registerCommand('podmanager.startPod', startPod),
         vscode.commands.registerCommand('podmanager.stopPod', stopPod),
         vscode.commands.registerCommand('podmanager.restartPod', restartPod),
@@ -273,6 +276,22 @@ async function composeUp(uri?: vscode.Uri) {
     await runComposeCommand('up -d', uri);
 }
 
+async function composeDown(uri?: vscode.Uri) {
+    await runComposeCommand('down', uri);
+}
+
+async function composeStart(uri?: vscode.Uri) {
+    await runComposeCommand('start', uri);
+}
+
+async function composeStop(uri?: vscode.Uri) {
+    await runComposeCommand('stop', uri);
+}
+
+async function composeRestart(uri?: vscode.Uri) {
+    await runComposeCommand('restart', uri);
+}
+
 async function startPod(item: PodmanItem) {
     await runPodCommand('start', item.id!);
 }
@@ -363,6 +382,7 @@ async function runComposeCommand(command: string, uri?: vscode.Uri) {
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to execute Podman Compose ${command}: ${error}`);
     }
+    podmanTreeDataProvider.refresh();
 }
 
 async function runPodCommand(command: string, podId: string, force: boolean = false) {
