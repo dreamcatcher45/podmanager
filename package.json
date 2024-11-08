@@ -114,6 +114,11 @@
         "icon": "$(arrow-up)"
       },
       {
+        "command": "podmanager.composeDown",
+        "title": "Compose Down",
+        "icon": "$(trash)"
+      },
+      {
         "command": "podmanager.composeStart",
         "title": "Compose Start",
         "icon": "$(play)"
@@ -127,11 +132,6 @@
         "command": "podmanager.composeRestart",
         "title": "Compose Restart",
         "icon": "$(refresh)"
-      },
-      {
-        "command": "podmanager.composeDown",
-        "title": "Compose Down",
-        "icon": "$(trash)"
       },
       {
         "command": "podmanager.refreshOverview",
@@ -289,6 +289,16 @@
           "group": "inline"
         },
         {
+          "command": "podmanager.composeUp",
+          "when": "view == podmanView && viewItem == compose-group",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.composeDown",
+          "when": "view == podmanView && viewItem == compose-group",
+          "group": "inline"
+        },
+        {
           "command": "podmanager.composeStart",
           "when": "view == podmanView && viewItem == compose-group",
           "group": "inline"
@@ -300,11 +310,6 @@
         },
         {
           "command": "podmanager.composeRestart",
-          "when": "view == podmanView && viewItem == compose-group",
-          "group": "inline"
-        },
-        {
-          "command": "podmanager.composeDown",
           "when": "view == podmanView && viewItem == compose-group",
           "group": "inline"
         },

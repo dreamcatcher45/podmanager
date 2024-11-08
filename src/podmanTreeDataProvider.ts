@@ -82,6 +82,9 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
             case 'pod':
                 children = await this.getPodContainers(element.id!);
                 break;
+            case 'compose-group':
+                children = element?.children || [];
+                break;
         }
 
         this.cache.set(cacheKey, children);
@@ -109,7 +112,8 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                     const isRunning = status.startsWith('Up');
                     const isCompose = labels.includes('com.docker.compose.project');
                     const composeProject = isCompose ? this.extractComposeProject(labels) : '';
-                    return { id, name, status, isRunning, isCompose, composeProject };
+                    const composeFile = isCompose ? this.extractComposeFile(labels) : '';
+                    return { id, name, status, isRunning, isCompose, composeProject, composeFile };
                 });
 
             const nonComposeContainers = containers
@@ -276,8 +280,25 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
     }
 
     private extractComposeProject(labels: string): string {
-        const projectLabel = labels.split(',').find(label => label.startsWith('com.docker.compose.project='));
-        return projectLabel ? projectLabel.split('=')[1] : 'Unknown Project';
+        const projectPattern = /com\.docker\.compose\.project(=|:)/;
+        return this.extractLabelValue(labels, projectPattern, 'Unknown Project');
+    }
+
+    private extractComposeFile(labels: string): string {
+        const directoryPattern = /com\.docker\.compose\.project\.working_dir(=|:)/;
+        const path = this.extractLabelValue(labels, directoryPattern, '');
+        if (path.length > 0) {
+            const filePattern = /com\.docker\.compose\.project\.config_files(=|:)/;
+            const composeFile = this.extractLabelValue(labels, filePattern, '');
+            return composeFile.length > 0 ? `${path}/${composeFile}` : '';
+        }
+        return '';
+    }
+
+    private extractLabelValue(labels: string, labelKeyPattern: RegExp, defaultValue: string): string {
+        const splitLabels = labels.split(/,| /);
+        const projectLabel = splitLabels.find(label => labelKeyPattern.test(label));
+        return projectLabel ? projectLabel.split(labelKeyPattern)[2] : defaultValue;
     }
 
     private getComposeGroups(containers: any[]): PodmanItem[] {
@@ -293,9 +314,21 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
         }, {});
 
         return Object.entries(composeGroups).map(([project, containers], index) => {
-            const groupItem = new PodmanItem(`Compose Group ${index + 1}: ${project}`, vscode.TreeItemCollapsibleState.Collapsed, 'compose-group', undefined, undefined, undefined, project);
-            groupItem.children = containers.map((c: any) => 
+            const children = containers.map((c: any) => 
                 new PodmanItem(`${c.name} (${c.id})`, vscode.TreeItemCollapsibleState.None, 'compose-container', c.id, c.status, c.isRunning, project)
+            );
+            const groupItem = new PodmanItem(
+                `Compose Group ${index + 1}: ${project}`,
+                vscode.TreeItemCollapsibleState.Collapsed,
+                'compose-group',
+                undefined,
+                undefined,
+                undefined,
+                project,
+                children,
+                undefined,
+                undefined,
+                containers[0].composeFile
             );
             return groupItem;
         });

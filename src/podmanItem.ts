@@ -11,7 +11,8 @@ export class PodmanItem extends vscode.TreeItem {
         public readonly composeProject?: string,
         public children?: PodmanItem[],
         public readonly isUsed?: boolean,
-        public readonly resourceName?: string
+        public readonly resourceName?: string,
+        public readonly fsPath?: string
     ) {
         super(label, collapsibleState);
         this.contextValue = contextValue;
