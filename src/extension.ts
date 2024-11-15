@@ -58,10 +58,6 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('podmanager.composeStart', composeStart),
         vscode.commands.registerCommand('podmanager.composeStop', composeStop),
         vscode.commands.registerCommand('podmanager.composeRestart', composeRestart),
-        vscode.commands.registerCommand('podmanager.startPod', startPod),
-        vscode.commands.registerCommand('podmanager.stopPod', stopPod),
-        vscode.commands.registerCommand('podmanager.restartPod', restartPod),
-        vscode.commands.registerCommand('podmanager.deletePod', deletePod),
         vscode.commands.registerCommand('podmanager.createContainer', createContainer),
         vscode.commands.registerCommand('podmanager.createVolume', createVolume),
         vscode.commands.registerCommand('podmanager.createNetwork', createNetwork),
@@ -272,27 +268,6 @@ async function deleteNetwork(item: PodmanItem) {
     }
 }
 
-async function startPod(item: PodmanItem) {
-    await runPodCommand('start', item.id!);
-}
-
-async function stopPod(item: PodmanItem) {
-    await runPodCommand('stop', item.id!);
-}
-
-async function restartPod(item: PodmanItem) {
-    await runPodCommand('restart', item.id!);
-}
-
-async function deletePod(item: PodmanItem) {
-    const answer = await vscode.window.showWarningMessage(
-        `Are you sure you want to forcefully delete pod ${item.id}?`,
-        'Yes', 'No'
-    );
-    if (answer === 'Yes') {
-        await runPodCommand('rm', item.id!, true);
-    }
-}
 
 async function checkPodmanMachineStatus(): Promise<boolean> {
     try {
