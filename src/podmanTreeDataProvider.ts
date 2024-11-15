@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { PodmanItem } from './podmanItem';
@@ -9,8 +10,6 @@ function getPodmanPath(): string {
     const config = vscode.workspace.getConfiguration('podmanager');
     return config.get('podmanPath', 'podman');
 }
-
-
 
 export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<PodmanItem | undefined | null | void> = new vscode.EventEmitter<PodmanItem | undefined | null | void>();
@@ -64,9 +63,6 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
             case 'containers':
                 children = await this.getContainers();
                 break;
-            case 'pods':
-                children = await this.getPods();
-                break;
             case 'images':
                 children = await this.getImages();
                 break;
@@ -94,7 +90,6 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
     private getRootItems(): PodmanItem[] {
         return [
             new PodmanItem('Containers', vscode.TreeItemCollapsibleState.Collapsed, 'containers'),
-            new PodmanItem('Pods', vscode.TreeItemCollapsibleState.Collapsed, 'pods'),
             new PodmanItem('Images', vscode.TreeItemCollapsibleState.Collapsed, 'images'),
             new PodmanItem('Volumes', vscode.TreeItemCollapsibleState.Collapsed, 'volumes'),
             new PodmanItem('Networks', vscode.TreeItemCollapsibleState.Collapsed, 'networks'),
@@ -129,32 +124,11 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
         }
     }
 
-    private async getPods(): Promise<PodmanItem[]> {
-        try {
-            const { stdout } = await execAsync(`${getPodmanPath()} pod ps --format "{{.Name}}|{{.Status}}|{{.Created}}|{{.Id}}"`);
-            return stdout.split('\n')
-                .filter(line => line.trim() !== '')
-                .map(line => {
-                    const [name, status, created, id] = line.split('|');
-                    return new PodmanItem(
-                        `Pod: ${name}`,
-                        vscode.TreeItemCollapsibleState.Collapsed,
-                        'pod',
-                        id,
-                        `Status: ${status}\nCreated: ${created}`
-                    );
-                });
-        } catch (error) {
-            vscode.window.showErrorMessage('Failed to get pods: ' + error);
-            return [];
-        }
-    }
-
     private async getImages(): Promise<PodmanItem[]> {
         try {
             const { stdout } = await execAsync(`${getPodmanPath()} image ls --format "{{.ID}}|{{.Repository}}|{{.Tag}}"`);
             const imageMap = new Map<string, string[]>();
-    
+
             stdout.split('\n')
                 .filter(line => line.trim() !== '')
                 .forEach(line => {
@@ -166,16 +140,16 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                         imageMap.get(id)!.push(`${repository}:${tag}`);
                     }
                 });
-    
+
             const { stdout: containerStdout } = await execAsync(`${getPodmanPath()} container ls -a --format "{{.ImageID}}"`);
             const usedImageIds = new Set(containerStdout.split('\n').filter(line => line.trim() !== ''));
-    
+
             return Array.from(imageMap.entries()).map(([id, names]) => {
                 const isUsed = usedImageIds.has(id);
-                const label = names.length > 1 
+                const label = names.length > 1
                     ? `${id} (${names.length} tags)`
                     : `${names[0]} (${id})`;
-                const children = names.map((name, index) => 
+                const children = names.map((name, index) =>
                     new PodmanItem(name, vscode.TreeItemCollapsibleState.None, 'image-tag', `${id}-tag-${index}`, id)
                 );
                 return new PodmanItem(
@@ -196,8 +170,6 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
         }
     }
 
-
-    
     private async getVolumes(): Promise<PodmanItem[]> {
         try {
             const { stdout } = await execAsync(`${getPodmanPath()} volume ls --format "{{.Name}}|{{.Driver}}"`);
@@ -223,7 +195,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
             return [];
         }
     }
-    
+
     private async getNetworks(): Promise<PodmanItem[]> {
         try {
             const { stdout } = await execAsync(`${getPodmanPath()} network ls --format "{{.Name}}|{{.Driver}}"`);
@@ -313,12 +285,20 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
             return groups;
         }, {});
 
-        return Object.entries(composeGroups).map(([project, containers], index) => {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            return [];
+        }
+
+        const workingDir = workspaceFolders[0].uri.fsPath;
+        const composeFile = path.join(workingDir, 'docker-compose.yml');
+
+        return Object.entries(composeGroups).map(([project, containers]) => {
             const children = containers.map((c: any) => 
                 new PodmanItem(`${c.name} (${c.id})`, vscode.TreeItemCollapsibleState.None, 'compose-container', c.id, c.status, c.isRunning, project)
             );
             const groupItem = new PodmanItem(
-                `Compose Group ${index + 1}: ${project}`,
+                `${project}`,
                 vscode.TreeItemCollapsibleState.Collapsed,
                 'compose-group',
                 undefined,
@@ -328,7 +308,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                 children,
                 undefined,
                 undefined,
-                containers[0].composeFile
+                composeFile
             );
             return groupItem;
         });

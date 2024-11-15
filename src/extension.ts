@@ -272,26 +272,6 @@ async function deleteNetwork(item: PodmanItem) {
     }
 }
 
-async function composeUp(uri?: vscode.Uri) {
-    await runComposeCommand('up -d', uri);
-}
-
-async function composeDown(uri?: vscode.Uri) {
-    await runComposeCommand('down', uri);
-}
-
-async function composeStart(uri?: vscode.Uri) {
-    await runComposeCommand('start', uri);
-}
-
-async function composeStop(uri?: vscode.Uri) {
-    await runComposeCommand('stop', uri);
-}
-
-async function composeRestart(uri?: vscode.Uri) {
-    await runComposeCommand('restart', uri);
-}
-
 async function startPod(item: PodmanItem) {
     await runPodCommand('start', item.id!);
 }
@@ -326,63 +306,80 @@ async function checkPodmanMachineStatus(): Promise<boolean> {
     }
 }
 
-async function runComposeCommand(command: string, uri?: vscode.Uri) {
+async function composeUp(input?: vscode.Uri | PodmanItem) {
+    await runComposeCommand('up -d', input);
+}
+
+async function composeDown(input?: vscode.Uri | PodmanItem) {
+    await runComposeCommand('down', input);
+}
+
+async function composeStart(input?: vscode.Uri | PodmanItem) {
+    await runComposeCommand('start', input);
+}
+
+async function composeStop(input?: vscode.Uri | PodmanItem) {
+    await runComposeCommand('stop', input);
+}
+
+async function composeRestart(input?: vscode.Uri | PodmanItem) {
+    await runComposeCommand('restart', input);
+}
+
+async function runComposeCommand(command: string, input?: vscode.Uri | PodmanItem) {
     let composeFile: string | undefined;
     let projectName: string | undefined;
+    let workingDir: string | undefined;
 
-    if (uri) {
-        composeFile = uri.fsPath;
-        const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+    if (input instanceof vscode.Uri) {
+        composeFile = input.fsPath;
+        workingDir = path.dirname(composeFile);
+        const workspaceFolder = vscode.workspace.getWorkspaceFolder(input);
         if (workspaceFolder) {
-            const relativePath = path.relative(workspaceFolder.uri.fsPath, composeFile);
             const folderName = path.basename(workspaceFolder.uri.fsPath);
             const fileName = path.basename(composeFile, path.extname(composeFile));
             projectName = `${folderName}_${fileName}`;
         }
-    } else {
+    } else if (input && 'contextValue' in input && input.contextValue === 'compose-group') {
+        projectName = input.composeProject;
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders) {
             vscode.window.showErrorMessage('No workspace folder is open');
             return;
         }
-
-        const rootPath = workspaceFolders[0].uri.fsPath;
-        const composeFileNames = ['docker-compose.yml', 'docker-compose.yaml', 'compose.yml', 'compose.yaml'];
-
-        for (const fileName of composeFileNames) {
-            const filePath = path.join(rootPath, fileName);
-            if (fs.existsSync(filePath)) {
-                composeFile = filePath;
-                const folderName = path.basename(rootPath);
-                projectName = `${folderName}_${path.basename(filePath, path.extname(filePath))}`;
-                break;
-            }
-        }
+        workingDir = workspaceFolders[0].uri.fsPath;
+        composeFile = path.join(workingDir, 'docker-compose.yml');
     }
 
-    if (!composeFile) {
-        vscode.window.showErrorMessage('No compose file found');
+    if (!composeFile || !fs.existsSync(composeFile)) {
+        vscode.window.showErrorMessage('Compose file not found');
         return;
     }
 
-    vscode.window.showInformationMessage(`Starting Podman Compose ${command}...`);
+    if (!projectName) {
+        vscode.window.showErrorMessage('Could not determine project name');
+        return;
+    }
+
+    if (!workingDir) {
+        vscode.window.showErrorMessage('Could not determine working directory');
+        return;
+    }
 
     try {
-        let cmd = `${getPodmanPath()}-compose -f "${composeFile}"`;
-        if (projectName) {
-            cmd += ` -p "${projectName}"`;
-        }
-        cmd += ` ${command}`;
+        const options = { cwd: workingDir };
+        const cmd = `${getPodmanPath()}-compose -f "${composeFile}" -p "${projectName}" ${command}`;
+        const { stdout, stderr } = await execAsync(cmd, options);
 
-        const { stdout, stderr } = await execAsync(cmd);
-        vscode.window.showInformationMessage(`Podman Compose ${command} executed successfully`);
         if (stderr) {
             vscode.window.showWarningMessage(`Podman Compose ${command} completed with warnings: ${stderr}`);
+        } else {
+            vscode.window.showInformationMessage(`Podman Compose ${command} executed successfully`);
         }
+        podmanTreeDataProvider.refresh();
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to execute Podman Compose ${command}: ${error}`);
     }
-    podmanTreeDataProvider.refresh();
 }
 
 async function runPodCommand(command: string, podId: string, force: boolean = false) {
