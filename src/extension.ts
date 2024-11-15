@@ -174,6 +174,7 @@ async function deleteContainer(item: PodmanItem) {
     if (answer === 'Yes') {
         try {
             await execAsync(`${getPodmanPath()} container rm -f ${item.id}`);
+            podmanTreeDataProvider.refresh(); //added refresh 
             vscode.window.showInformationMessage(`Container ${item.id} deleted successfully`);
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to delete container ${item.id}: ` + error);
@@ -184,6 +185,7 @@ async function deleteContainer(item: PodmanItem) {
 async function startContainer(item: PodmanItem) {
     try {
         await execAsync(`${getPodmanPath()} container start ${item.id}`);
+        podmanTreeDataProvider.refresh(); //added refresh 
         vscode.window.showInformationMessage(`Container ${item.id} started successfully`);
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to start container ${item.id}: ` + error);
@@ -193,6 +195,7 @@ async function startContainer(item: PodmanItem) {
 async function stopContainer(item: PodmanItem) {
     try {
         await execAsync(`${getPodmanPath()} container stop ${item.id}`);
+        podmanTreeDataProvider.refresh(); //added refresh 
         vscode.window.showInformationMessage(`Container ${item.id} stopped successfully`);
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to stop container ${item.id}: ` + error);
@@ -202,6 +205,7 @@ async function stopContainer(item: PodmanItem) {
 async function restartContainer(item: PodmanItem) {
     try {
         await execAsync(`${getPodmanPath()} container restart ${item.id}`);
+        podmanTreeDataProvider.refresh(); //added refresh 
         vscode.window.showInformationMessage(`Container ${item.id} restarted successfully`);
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to restart container ${item.id}: ` + error);
@@ -225,6 +229,7 @@ async function deleteImage(item: PodmanItem) {
     if (answer === 'Yes') {
         try {
             await execAsync(`${getPodmanPath()} image rm -f ${item.id}`);
+            podmanTreeDataProvider.refresh(); //added refresh 
             vscode.window.showInformationMessage(`Image ${item.id} deleted successfully`);
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to delete image ${item.id}: ` + error);
