@@ -1,6 +1,6 @@
 # Podmanager - VSCode Extension
 
-**Podmanager** is an unofficial Visual Studio Code extension designed to help you manage Podman containers, images, volumes, and networks directly from the VSCode interface.
+**Podmanager** is an Visual Studio Code extension designed to help you manage Podman containers, images, volumes, and networks directly from the VSCode interface.
 
 Explore more about Podmanager on the [website](https://pod-manager.pages.dev) and [Documentation](https://pod-manager.pages.dev/docs)
 
