@@ -170,45 +170,49 @@ async function startPodmanMachine() {
 }
 
 async function deleteContainer(item: PodmanItem) {
-    const answer = await vscode.window.showWarningMessage(`Are you sure you want to delete container ${item.id}?`, 'Yes', 'No');
+    const containerId = item.originalId || item.id;
+    const answer = await vscode.window.showWarningMessage(`Are you sure you want to delete container ${containerId}?`, 'Yes', 'No');
     if (answer === 'Yes') {
         try {
-            await execAsync(`${getPodmanPath()} container rm -f ${item.id}`);
-            podmanTreeDataProvider.refresh(); //added refresh 
-            vscode.window.showInformationMessage(`Container ${item.id} deleted successfully`);
+            await execAsync(`${getPodmanPath()} container rm -f ${containerId}`);
+            podmanTreeDataProvider.refresh();
+            vscode.window.showInformationMessage(`Container ${containerId} deleted successfully`);
         } catch (error) {
-            vscode.window.showErrorMessage(`Failed to delete container ${item.id}: ` + error);
+            vscode.window.showErrorMessage(`Failed to delete container ${item.originalId || item.id}: ` + error);
         }
     }
 }
 
 async function startContainer(item: PodmanItem) {
     try {
-        await execAsync(`${getPodmanPath()} container start ${item.id}`);
-        podmanTreeDataProvider.refresh(); //added refresh 
-        vscode.window.showInformationMessage(`Container ${item.id} started successfully`);
+        const containerId = item.originalId || item.id;
+        await execAsync(`${getPodmanPath()} container start ${containerId}`);
+        podmanTreeDataProvider.refresh();
+        vscode.window.showInformationMessage(`Container ${containerId} started successfully`);
     } catch (error) {
-        vscode.window.showErrorMessage(`Failed to start container ${item.id}: ` + error);
+        vscode.window.showErrorMessage(`Failed to start container ${item.originalId || item.id}: ` + error);
     }
 }
 
 async function stopContainer(item: PodmanItem) {
     try {
-        await execAsync(`${getPodmanPath()} container stop ${item.id}`);
-        podmanTreeDataProvider.refresh(); //added refresh 
-        vscode.window.showInformationMessage(`Container ${item.id} stopped successfully`);
+        const containerId = item.originalId || item.id;
+        await execAsync(`${getPodmanPath()} container stop ${containerId}`);
+        podmanTreeDataProvider.refresh();
+        vscode.window.showInformationMessage(`Container ${containerId} stopped successfully`);
     } catch (error) {
-        vscode.window.showErrorMessage(`Failed to stop container ${item.id}: ` + error);
+        vscode.window.showErrorMessage(`Failed to stop container ${item.originalId || item.id}: ` + error);
     }
 }
 
 async function restartContainer(item: PodmanItem) {
     try {
-        await execAsync(`${getPodmanPath()} container restart ${item.id}`);
-        podmanTreeDataProvider.refresh(); //added refresh 
-        vscode.window.showInformationMessage(`Container ${item.id} restarted successfully`);
+        const containerId = item.originalId || item.id;
+        await execAsync(`${getPodmanPath()} container restart ${containerId}`);
+        podmanTreeDataProvider.refresh();
+        vscode.window.showInformationMessage(`Container ${containerId} restarted successfully`);
     } catch (error) {
-        vscode.window.showErrorMessage(`Failed to restart container ${item.id}: ` + error);
+        vscode.window.showErrorMessage(`Failed to restart container ${item.originalId || item.id}: ` + error);
     }
 }
 
@@ -229,7 +233,7 @@ async function deleteImage(item: PodmanItem) {
     if (answer === 'Yes') {
         try {
             await execAsync(`${getPodmanPath()} image rm -f ${item.id}`);
-            podmanTreeDataProvider.refresh(); //added refresh 
+            podmanTreeDataProvider.refresh();
             vscode.window.showInformationMessage(`Image ${item.id} deleted successfully`);
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to delete image ${item.id}: ` + error);
@@ -272,7 +276,6 @@ async function deleteNetwork(item: PodmanItem) {
         }
     }
 }
-
 
 async function checkPodmanMachineStatus(): Promise<boolean> {
     try {

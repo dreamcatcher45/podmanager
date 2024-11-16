@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 
 export class PodmanItem extends vscode.TreeItem {
+    public readonly originalId?: string;
+
     constructor(
         public readonly label: string,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
@@ -16,10 +18,14 @@ export class PodmanItem extends vscode.TreeItem {
     ) {
         super(label, collapsibleState);
         this.contextValue = contextValue;
-        // Generate a unique ID if this is a compose container
+        // Store the original ID before potentially modifying it
+        this.originalId = id;
+        
+        // Generate a unique display ID if this is a compose container
         if (this.contextValue === 'compose-container' && this.id && this.composeProject) {
             this.id = `compose-${this.composeProject}-${this.id}`;
         }
+        
         this.iconPath = this.getIconPath();
         this.tooltip = this.getTooltip();
         this.command = this.getCommand();
@@ -52,17 +58,14 @@ export class PodmanItem extends vscode.TreeItem {
 
     private getTooltip(): string | undefined {
         if (this.contextValue === 'pod') {
-            return `ID: ${this.id}\n${this.status}`;
+            return `ID: ${this.originalId}\n${this.status}`;
         }
         if (this.contextValue === 'container' || this.contextValue === 'compose-container') {
-            const displayId = this.contextValue === 'compose-container' && this.id 
-                ? this.id.split('-').pop() 
-                : this.id;
-            return `ID: ${displayId}\nStatus: ${this.status}`;
+            return `ID: ${this.originalId}\nStatus: ${this.status}`;
         } else if (this.contextValue === 'image') {
-            return `ID: ${this.id}\nUsed: ${this.isUsed ? 'Yes' : 'No'}`;
+            return `ID: ${this.originalId}\nUsed: ${this.isUsed ? 'Yes' : 'No'}`;
         } else if (this.contextValue === 'image-tag') {
-            return `ID: ${this.id}\nTag: ${this.label}`;
+            return `ID: ${this.originalId}\nTag: ${this.label}`;
         } else if (this.contextValue === 'compose-group') {
             return `Compose Project: ${this.composeProject}`;
         }
