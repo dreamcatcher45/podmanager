@@ -219,8 +219,9 @@ async function restartContainer(item: PodmanItem) {
 async function openInTerminal(item: PodmanItem) {
     if (item.id) {
         try {
+            const containerId = extractContainerId(item.id);
             const terminal = vscode.window.createTerminal(`Podman: ${item.label}`);
-            terminal.sendText(`${getPodmanPath()} exec -it ${item.id} /bin/sh`);
+            terminal.sendText(`${getPodmanPath()} exec -it ${containerId} /bin/sh`);
             terminal.show();
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to open terminal for container ${item.id}: ${error}`);
@@ -275,6 +276,16 @@ async function deleteNetwork(item: PodmanItem) {
             vscode.window.showErrorMessage(`Failed to delete network ${item.resourceName}: ` + error);
         }
     }
+}
+
+function extractContainerId(fullId: string): string {
+    // If the ID contains a hyphen followed by a hash-like string at the end
+    const match = fullId.match(/-([a-f0-9]{12})$/i);
+    if (match) {
+        return match[1];
+    }
+    // If no match found, return the original ID
+    return fullId;
 }
 
 async function checkPodmanMachineStatus(): Promise<boolean> {

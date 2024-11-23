@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.3] - 2024-11-23
+### Added
+- Open in terminal bug fix for containers
+
 ## [0.1.9] - 2024-10-20
 ### Added
 - Added create volume tool
