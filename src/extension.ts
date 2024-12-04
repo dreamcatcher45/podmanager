@@ -61,7 +61,8 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('podmanager.createContainer', createContainer),
         vscode.commands.registerCommand('podmanager.createVolume', createVolume),
         vscode.commands.registerCommand('podmanager.createNetwork', createNetwork),
-        vscode.commands.registerCommand('podmanager.buildImage', buildImage)
+        vscode.commands.registerCommand('podmanager.buildImage', buildImage),
+        vscode.commands.registerCommand('podmanager.viewContainerLogs', viewContainerLogs),
     ];
 
     context.subscriptions.push(...commands);
@@ -386,6 +387,19 @@ async function runPodCommand(command: string, podId: string, force: boolean = fa
         }
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to execute pod ${command}: ${error}`);
+    }
+}
+
+async function viewContainerLogs(item: PodmanItem) {
+    if (item.id) {
+        try {
+            const containerId = extractContainerId(item.id);
+            const terminal = vscode.window.createTerminal(`Podman Logs: ${item.label}`);
+            terminal.sendText(`${getPodmanPath()} logs -f ${containerId}`);
+            terminal.show();
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to view logs for container ${item.id}: ${error}`);
+        }
     }
 }
 

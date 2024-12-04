@@ -183,24 +183,28 @@
       {
         "command": "podmanager.createVolume",
         "title": "Podman: Create Volume"
-    },
-    {
+      },
+      {
         "command": "podmanager.createNetwork",
         "title": "Podman: Create Network"
-    },
-    {
-      "command": "podmanager.collapseAll",
-      "title": "Collapse All",
-      "icon": "$(collapse-all)"
-    },
-    {
-      "command": "podmanager.buildImage",
-      "title": "Podman: Build Image"
-    }
+      },
+      {
+        "command": "podmanager.collapseAll",
+        "title": "Collapse All",
+        "icon": "$(collapse-all)"
+      },
+      {
+        "command": "podmanager.buildImage",
+        "title": "Podman: Build Image"
+      },
+      {
+        "command": "podmanager.viewContainerLogs",
+        "title": "View Logs",
+        "icon": "$(output)"
+      }
     ],
     "menus": {
       "view/title": [
-        
         {
           "command": "podmanager.collapseAll",
           "when": "view == podmanView",
@@ -249,6 +253,16 @@
           "group": "inline"
         },
         {
+          "command": "podmanager.viewContainerLogs",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.viewContainerLogs",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
           "command": "podmanager.startContainer",
           "when": "view == podmanView && viewItem == compose-container",
           "group": "inline"
@@ -270,6 +284,16 @@
         },
         {
           "command": "podmanager.openInTerminal",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.viewContainerLogs",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.viewContainerLogs",
           "when": "view == podmanView && viewItem == compose-container",
           "group": "inline"
         },
