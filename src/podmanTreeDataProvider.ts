@@ -108,22 +108,42 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                 .filter(line => line.trim() !== '')
                 .map(line => {
                     const [id, name, status, labels] = line.split('|');
-                    const isRunning = status.startsWith('Up');
-                    const isCompose = labels.includes('com.docker.compose.project');
-                    const composeProject = isCompose ? this.extractComposeProject(labels) : '';
-                    const composeFile = isCompose ? this.extractComposeFile(labels) : '';
-                    return { id, name, status, isRunning, isCompose, composeProject, composeFile };
+                    const containerStatus = status || 'Unknown';
+                    const isRunning = containerStatus && typeof containerStatus === 'string' ? 
+                        containerStatus.startsWith('Up') : false;
+                    const containerLabels = labels || '';
+                    const isCompose = containerLabels.includes('com.docker.compose.project');
+                    const composeProject = isCompose ? this.extractComposeProject(containerLabels) : '';
+                    const composeFile = isCompose ? this.extractComposeFile(containerLabels) : '';
+                    
+                    return { 
+                        id: id || '', 
+                        name: name || id || 'unnamed', 
+                        status: containerStatus, 
+                        isRunning, 
+                        isCompose, 
+                        composeProject, 
+                        composeFile 
+                    };
                 });
 
             const nonComposeContainers = containers
-                .filter(c => !c.isCompose)
-                .map(c => new PodmanItem(`${c.name} (${c.id})`, vscode.TreeItemCollapsibleState.None, 'container', c.id, c.status, c.isRunning));
+                .filter(c => !c.isCompose && c.id) 
+                .map(c => new PodmanItem(
+                    `${c.name} (${c.id})`,
+                    vscode.TreeItemCollapsibleState.None,
+                    'container',
+                    c.id,
+                    c.status,
+                    c.isRunning
+                ));
 
             const composeGroups = this.getComposeGroups(containers);
 
             return [...nonComposeContainers, ...composeGroups];
         } catch (error) {
-            vscode.window.showErrorMessage('Failed to get containers: ' + error);
+            console.error('Failed to get containers:', error);
+            vscode.window.showErrorMessage(`Failed to get containers: ${error}`);
             return [];
         }
     }
