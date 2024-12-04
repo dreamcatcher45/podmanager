@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.4] - 2024-12-04
+### Added
+- Added log view option
+
 ## [2.0.3] - 2024-11-23
 ### Added
 - Open in terminal bug fix for containers
