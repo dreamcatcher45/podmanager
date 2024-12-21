@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.6] - 2024-12-21
+### Added
+- Podman push option for images (Disabled by default)
+
 ## [2.0.4] - 2024-12-04
 ### Added
 - Added log view option

@@ -2,7 +2,7 @@
   "name": "podmanager",
   "displayName": "Pod Manager",
   "description": "Manage Podman containers, images, volumes, and networks.",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "publisher": "dreamcatcher45",
   "homepage": "https://pod-manager.pages.dev",
   "repository": {
@@ -201,6 +201,11 @@
         "command": "podmanager.viewContainerLogs",
         "title": "View Logs",
         "icon": "$(output)"
+      },
+      {
+        "command": "podmanager.pushImage",
+        "title": "Push Image",
+        "icon": "$(cloud-upload)"
       }
     ],
     "menus": {
@@ -303,6 +308,21 @@
           "group": "inline"
         },
         {
+          "command": "podmanager.pushImage",
+          "when": "view == podmanView && viewItem == image",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.pushImage",
+          "when": "view == podmanView && viewItem == image && config.podmanager.enablePushCommand",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.pushImage",
+          "when": "view == podmanView && viewItem == image && config.podmanager.enablePushCommand == true",
+          "group": "inline"
+        },
+        {
           "command": "podmanager.deleteVolume",
           "when": "view == podmanView && viewItem == volume",
           "group": "inline"
@@ -383,6 +403,16 @@
           "type": "string",
           "default": "podman",
           "description": "Custom path to the podman executable"
+        },
+        "podmanager.enablePushCommand": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable/disable image push command"
+        },
+        "podmanager.pushDefaultRegistry": {
+          "type": "string",
+          "default": "",
+          "description": "Default registry URL for push command"
         }
       }
     }

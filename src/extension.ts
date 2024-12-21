@@ -63,6 +63,35 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('podmanager.createNetwork', createNetwork),
         vscode.commands.registerCommand('podmanager.buildImage', buildImage),
         vscode.commands.registerCommand('podmanager.viewContainerLogs', viewContainerLogs),
+        // Replace the existing pushImage command with this:
+        vscode.commands.registerCommand('podmanager.pushImage', async (item: PodmanItem) => {
+            if (item.id) {
+                try {
+                    const config = vscode.workspace.getConfiguration('podmanager');
+                    if (!config.get('enablePushCommand')) {
+                        vscode.window.showInformationMessage('Push command is disabled in settings');
+                        return;
+                    }
+
+                    const imageName = item.label.split(' ')[0];
+                    const terminal = vscode.window.createTerminal(`Push Image: ${item.label}`);
+                    
+                    const defaultRegistry = config.get('pushDefaultRegistry');
+                    let pushCmd = `${getPodmanPath()} push`;
+
+                    if (defaultRegistry) {
+                        pushCmd += ` ${imageName} ${defaultRegistry}/${imageName}`;
+                    } else {
+                        pushCmd += ` ${imageName}`;
+                    }
+                    
+                    terminal.sendText(pushCmd);
+                    terminal.show();
+                } catch (error) {
+                    vscode.window.showErrorMessage(`Failed to push image ${item.id}: ${error}`);
+                }
+            }
+        })
     ];
 
     context.subscriptions.push(...commands);
