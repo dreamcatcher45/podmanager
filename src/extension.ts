@@ -96,6 +96,44 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(...commands);
 
+    function getMachineName(): string {
+        const config = vscode.workspace.getConfiguration('podmanager');
+        return config.get<string>('machineName') || 'podman-machine-default';
+    }
+
+    async function checkPodmanMachineStatus(): Promise<boolean> {
+        const machineName = getMachineName();
+        try {
+            const result = await executeCommand('podman', ['machine', 'list', '--format', 'json']);
+            const machines = JSON.parse(result);
+            const machine = machines.find((m: any) => m.Name === machineName);
+            return machine?.Running || false;
+        } catch (error) {
+            console.error('Error checking Podman machine status:', error);
+            return false;
+        }
+    }
+
+    async function startPodmanMachine() {
+        const machineName = getMachineName();
+        try {
+            await executeCommand('podman', ['machine', 'start', machineName]);
+            vscode.window.showInformationMessage(`Podman machine '${machineName}' started successfully`);
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to start Podman machine '${machineName}': ${error}`);
+        }
+    }
+
+    async function stopPodmanMachine() {
+        const machineName = getMachineName();
+        try {
+            await executeCommand('podman', ['machine', 'stop', machineName]);
+            vscode.window.showInformationMessage(`Podman machine '${machineName}' stopped successfully`);
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to stop Podman machine '${machineName}': ${error}`);
+        }
+    }
+
     checkPodmanMachineStatus();
 }
 
@@ -176,26 +214,6 @@ async function runPruneCommand(command: string, description: string): Promise<vo
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to ${description.toLowerCase()}: ${error}`);
         }
-    }
-}
-
-async function startPodmanMachine() {
-    try {
-        const isRunning = await checkPodmanMachineStatus();
-        if (isRunning) {
-            vscode.window.showInformationMessage('Podman machine is already running.');
-        } else {
-            const answer = await vscode.window.showInformationMessage(
-                'Podman machine is not running. Do you want to start it?',
-                'Yes', 'No'
-            );
-            if (answer === 'Yes') {
-                await execAsync(`${getPodmanPath()} machine start`);
-                vscode.window.showInformationMessage('Podman machine started successfully');
-            }
-        }
-    } catch (error) {
-        vscode.window.showErrorMessage('Failed to start Podman machine: ' + error);
     }
 }
 
@@ -318,18 +336,6 @@ function extractContainerId(fullId: string): string {
     return fullId;
 }
 
-async function checkPodmanMachineStatus(): Promise<boolean> {
-    try {
-        const { stdout } = await execAsync(`${getPodmanPath()} machine list --format "{{.Name}}|{{.Running}}"`);
-        const machines = stdout.split('\n').filter(line => line.trim() !== '');
-        const runningMachine = machines.find(machine => machine.split('|')[1] === 'Running');
-        return !!runningMachine;
-    } catch (error) {
-        vscode.window.showErrorMessage('Failed to check Podman machine status: ' + error);
-        return false;
-    }
-}
-
 async function composeUp(input?: vscode.Uri | PodmanItem) {
     await runComposeCommand('up -d', input);
 }
@@ -429,6 +435,19 @@ async function viewContainerLogs(item: PodmanItem) {
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to view logs for container ${item.id}: ${error}`);
         }
+    }
+}
+
+async function executeCommand(command: string, args: string[] = []): Promise<string> {
+    try {
+        const { stdout, stderr } = await execAsync(`${command} ${args.join(' ')}`);
+        if (stderr) {
+            console.warn('Command warning:', stderr);
+        }
+        return stdout.trim();
+    } catch (error) {
+        console.error('Command error:', error);
+        throw error;
     }
 }
 

@@ -2,7 +2,7 @@
   "name": "podmanager",
   "displayName": "Pod Manager",
   "description": "Manage Podman containers, images, volumes, and networks.",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "publisher": "dreamcatcher45",
   "homepage": "https://pod-manager.pages.dev",
   "repository": {
@@ -413,6 +413,11 @@
           "type": "string",
           "default": "",
           "description": "Default registry URL for push command"
+        },
+        "podmanager.machineName": {
+          "type": "string",
+          "default": "podman-machine-default",
+          "description": "Name of the Podman machine to connect to"
         }
       }
     }

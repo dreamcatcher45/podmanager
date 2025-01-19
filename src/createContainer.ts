@@ -15,6 +15,10 @@ interface VolumeInfo {
     mountPoint: string;
 }
 
+interface AdvancedOptions {
+    mounts?: string[];
+}
+
 function getPodmanPath(): string {
     const config = vscode.workspace.getConfiguration('podmanager');
     return config.get('podmanPath', 'podman');
@@ -101,6 +105,13 @@ export async function createContainer() {
             if (memoryLimit) {
                 command += ` -m ${memoryLimit}`;
             }
+
+            const advancedOptions = await getAdvancedOptions();
+            if (advancedOptions?.mounts) {
+                for (const mount of advancedOptions.mounts) {
+                    command += ` --mount "${mount}"`;
+                }
+            }
         }
 
         command += ` ${selectedImageInfo.imageInfo.repository}:${selectedImageInfo.imageInfo.tag} tail -f /dev/null`;
@@ -114,6 +125,29 @@ export async function createContainer() {
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to create container: ${error}`);
     }
+}
+
+async function getAdvancedOptions(): Promise<AdvancedOptions | undefined> {
+    const mountsInput = await vscode.window.showInputBox({
+        prompt: 'Mount points (optional, semicolon separated)',
+        placeHolder: 'type=bind,src=/local/path,target=/container/path;type=bind,src=/another/path,target=/target',
+        validateInput: (value) => {
+            if (!value) { 
+                return null;
+            }
+            const mounts = value.split(';');
+            for (const mount of mounts) {
+                if (!mount.includes('type=') || !mount.includes('src=') || !mount.includes('target=')) {
+                    return 'Invalid mount format. Use: type=bind,src=/path,target=/path';
+                }
+            }
+            return null;
+        }
+    });
+
+    return {
+        mounts: mountsInput ? mountsInput.split(';').filter(m => m.trim()) : undefined,
+    };
 }
 
 async function getImages(): Promise<ImageInfo[]> {
