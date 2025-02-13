@@ -63,7 +63,6 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('podmanager.createNetwork', createNetwork),
         vscode.commands.registerCommand('podmanager.buildImage', buildImage),
         vscode.commands.registerCommand('podmanager.viewContainerLogs', viewContainerLogs),
-        // Replace the existing pushImage command with this:
         vscode.commands.registerCommand('podmanager.pushImage', async (item: PodmanItem) => {
             if (item.id) {
                 try {
@@ -356,49 +355,88 @@ async function composeRestart(input?: vscode.Uri | PodmanItem) {
     await runComposeCommand('restart', input);
 }
 
+function getComposePath(): string {
+    const config = vscode.workspace.getConfiguration('podmanager');
+    return config.get('composePath', 'podman-compose');
+}
+
+function getComposeCommandStyle(): string {
+    const config = vscode.workspace.getConfiguration('podmanager');
+    return config.get('composeCommandStyle', 'default');
+}
+
+function buildComposeCommand(podmanPath: string, composeFile: string, projectName: string, command: string): string {
+    try {
+        const composePath = getComposePath();
+        const commandStyle = getComposeCommandStyle();
+        const isRemoteFlag = podmanPath.includes('--remote');
+        
+        // Remove --remote flag from podmanPath if present
+        const cleanPodmanPath = podmanPath.replace('--remote', '').trim();
+        
+        // If a custom compose path is specified and not empty, use it directly
+        if (composePath && composePath !== 'podman-compose') {
+            return `${composePath} -f "${composeFile}" -p "${projectName}" ${command}`;
+        }
+        
+        // Handle different command styles
+        switch (commandStyle) {
+            case 'podman-space-compose':
+                return isRemoteFlag
+                    ? `${cleanPodmanPath} --remote compose -f "${composeFile}" -p "${projectName}" ${command}`
+                    : `${cleanPodmanPath} compose -f "${composeFile}" -p "${projectName}" ${command}`;
+            case 'podman-compose':
+            case 'default':
+            default:
+                // Maintain backward compatibility with existing behavior
+                return isRemoteFlag
+                    ? `${cleanPodmanPath}-compose --remote -f "${composeFile}" -p "${projectName}" ${command}`
+                    : `${cleanPodmanPath}-compose -f "${composeFile}" -p "${projectName}" ${command}`;
+        }
+    } catch (error) {
+        // If anything goes wrong, fall back to the original behavior
+        return `${podmanPath}-compose -f "${composeFile}" -p "${projectName}" ${command}`;
+    }
+}
+
 async function runComposeCommand(command: string, input?: vscode.Uri | PodmanItem) {
     let composeFile: string | undefined;
-    let projectName: string | undefined;
     let workingDir: string | undefined;
-
-    if (input instanceof vscode.Uri) {
-        composeFile = input.fsPath;
-        workingDir = path.dirname(composeFile);
-        const workspaceFolder = vscode.workspace.getWorkspaceFolder(input);
-        if (workspaceFolder) {
-            const folderName = path.basename(workspaceFolder.uri.fsPath);
-            const fileName = path.basename(composeFile, path.extname(composeFile));
-            projectName = `${folderName}_${fileName}`;
-        }
-    } else if (input && 'contextValue' in input && input.contextValue === 'compose-group') {
-        projectName = input.composeProject;
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders) {
-            vscode.window.showErrorMessage('No workspace folder is open');
-            return;
-        }
-        workingDir = workspaceFolders[0].uri.fsPath;
-        composeFile = path.join(workingDir, 'docker-compose.yml');
-    }
-
-    if (!composeFile || !fs.existsSync(composeFile)) {
-        vscode.window.showErrorMessage('Compose file not found');
-        return;
-    }
-
-    if (!projectName) {
-        vscode.window.showErrorMessage('Could not determine project name');
-        return;
-    }
-
-    if (!workingDir) {
-        vscode.window.showErrorMessage('Could not determine working directory');
-        return;
-    }
+    let projectName: string;
 
     try {
+        if (input instanceof vscode.Uri) {
+            composeFile = input.fsPath;
+            workingDir = path.dirname(composeFile);
+            projectName = path.basename(workingDir);
+        } else if (input && input.composeProject && input.fsPath) {
+            composeFile = input.fsPath;
+            workingDir = path.dirname(composeFile);
+            projectName = input.composeProject;
+        } else {
+            const files = await vscode.workspace.findFiles('**/docker-compose.{yml,yaml}', '**/node_modules/**');
+            if (files.length === 0) {
+                vscode.window.showErrorMessage('No docker-compose.yml file found in the workspace');
+                return;
+            }
+            composeFile = files[0].fsPath;
+            workingDir = path.dirname(composeFile);
+            projectName = path.basename(workingDir);
+        }
+
+        if (!composeFile) {
+            vscode.window.showErrorMessage('No compose file specified');
+            return;
+        }
+
+        if (!workingDir) {
+            vscode.window.showErrorMessage('Could not determine working directory');
+            return;
+        }
+
         const options = { cwd: workingDir };
-        const cmd = `${getPodmanPath()}-compose -f "${composeFile}" -p "${projectName}" ${command}`;
+        const cmd = buildComposeCommand(getPodmanPath(), composeFile, projectName, command);
+        
         const { stdout, stderr } = await execAsync(cmd, options);
 
         if (stderr) {

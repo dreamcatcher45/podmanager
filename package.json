@@ -2,7 +2,7 @@
   "name": "podmanager",
   "displayName": "Pod Manager",
   "description": "Manage Podman containers, images, volumes, and networks.",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "publisher": "dreamcatcher45",
   "homepage": "https://pod-manager.pages.dev",
   "repository": {
@@ -403,6 +403,17 @@
           "type": "string",
           "default": "podman",
           "description": "Custom path to the podman executable"
+        },
+        "podmanager.composePath": {
+          "type": "string",
+          "default": "podman-compose",
+          "description": "Custom path to the compose executable (e.g., 'podman-compose', 'docker-compose.exe', or leave empty to use 'podman compose')"
+        },
+        "podmanager.composeCommandStyle": {
+          "type": "string",
+          "default": "default",
+          "enum": ["default", "podman-compose", "podman-space-compose"],
+          "description": "Style of compose command execution: 'default' uses podman-compose, 'podman-compose' uses the separate executable, 'podman-space-compose' adds space between podman and compose"
         },
         "podmanager.enablePushCommand": {
           "type": "boolean",
