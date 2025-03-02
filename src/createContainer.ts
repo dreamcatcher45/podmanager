@@ -72,12 +72,13 @@ export async function createContainer() {
                 if (selectedVolume) {
                     // Ask for container mount point
                     const containerPath = await vscode.window.showInputBox({ 
-                        prompt: 'Enter container mount point (e.g., /app/data)',
-                        placeHolder: '/app/data'
+                        prompt: 'Enter container mount point (e.g., /folder)',
+                        placeHolder: '/folder'
                     });
 
                     if (containerPath) {
-                        command += ` -v ${selectedVolume.volume.name}:${containerPath}`;
+                        // Simplified binding using "-v ${PWD}:containerPath" and set working directory
+                        command += ` -v "\${PWD}:${containerPath}" -w ${containerPath}`;
                     }
                 }
             }
