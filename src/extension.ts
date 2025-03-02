@@ -156,8 +156,16 @@ async function openToolsMenu() {
 }
 
 async function buildImage(uri: vscode.Uri) {
-    const dockerfilePath = uri.fsPath;
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+    let dockerfilePath: string;
+    if (uri && uri.fsPath) {
+        dockerfilePath = uri.fsPath;
+    } else if (vscode.window.activeTextEditor) {
+        dockerfilePath = vscode.window.activeTextEditor.document.uri.fsPath;
+    } else {
+        vscode.window.showErrorMessage('No Dockerfile path could be determined.');
+        return;
+    }
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(dockerfilePath));
 
     if (!workspaceFolder) {
         vscode.window.showErrorMessage('Unable to determine workspace folder');
