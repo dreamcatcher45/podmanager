@@ -44,7 +44,7 @@
       "activitybar": [
         {
           "id": "podmanager-sidebar",
-          "title": "Podmanager",
+          "title": "Pod Manager",
           "icon": "media/podman-icon.svg"
         }
       ]
@@ -53,7 +53,11 @@
       "podmanager-sidebar": [
         {
           "id": "podmanView",
-          "name": "Podman Resources"
+          "name": "Resources"
+        },
+        {
+          "id": "podmanLinks",
+          "name": "Quick Links"
         }
       ]
     },
@@ -412,7 +416,11 @@
         "podmanager.composeCommandStyle": {
           "type": "string",
           "default": "default",
-          "enum": ["default", "podman-compose", "podman-space-compose"],
+          "enum": [
+            "default",
+            "podman-compose",
+            "podman-space-compose"
+          ],
           "description": "Style of compose command execution: 'default' uses podman-compose, 'podman-compose' uses the separate executable, 'podman-space-compose' adds space between podman and compose"
         },
         "podmanager.enablePushCommand": {
@@ -443,7 +451,7 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.7",
-    "@types/node": "^20.16.5",
+    "@types/node": "^20.19.0",
     "@types/vscode": "^1.92.0",
     "@typescript-eslint/eslint-plugin": "^7.14.1",
     "@typescript-eslint/parser": "^7.11.0",

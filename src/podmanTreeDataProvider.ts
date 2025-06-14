@@ -3,12 +3,29 @@ import * as path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { PodmanItem } from './podmanItem';
+import { getPodmanPath } from './podmanConfig';
+import { withStatus } from './statusBarManager';
+import { showErrorWithCopy } from './utils/messageUtil';
 
 const execAsync = promisify(exec);
 
-function getPodmanPath(): string {
-    const config = vscode.workspace.getConfiguration('podmanager');
-    return config.get('podmanPath', 'podman');
+interface ContainerInfo {
+    id: string;
+    name: string;
+    status: string;
+    isRunning: boolean;
+    isCompose: boolean;
+    composeProject: string;
+    composeFile: string;
+}
+
+interface ComposeGroup {
+    containers: ContainerInfo[];
+    composeFile: string;
+}
+
+interface ComposeGroups {
+    [key: string]: ComposeGroup;
 }
 
 export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanItem> {
@@ -39,13 +56,11 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
     }
 
     async refreshOverview(): Promise<void> {
-        try {
+        await withStatus('Refreshing overview', async () => {
             const { stdout } = await execAsync(`${getPodmanPath()} system df`);
             this.overviewData = stdout;
             this.refresh();
-        } catch (error) {
-            vscode.window.showErrorMessage('Failed to fetch Podman system overview: ' + error);
-        }
+        });
     }
 
     getTreeItem(element: PodmanItem): vscode.TreeItem {
@@ -66,6 +81,9 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
         switch (element.contextValue) {
             case 'containers':
                 children = await this.getContainers();
+                break;
+            case 'pods':
+                children = await this.getPods();
                 break;
             case 'images':
                 children = await this.getImages();
@@ -94,6 +112,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
     private getRootItems(): PodmanItem[] {
         return [
             new PodmanItem('Containers', vscode.TreeItemCollapsibleState.Collapsed, 'containers'),
+            new PodmanItem('Pods', vscode.TreeItemCollapsibleState.Collapsed, 'pods'),
             new PodmanItem('Images', vscode.TreeItemCollapsibleState.Collapsed, 'images'),
             new PodmanItem('Volumes', vscode.TreeItemCollapsibleState.Collapsed, 'volumes'),
             new PodmanItem('Networks', vscode.TreeItemCollapsibleState.Collapsed, 'networks'),
@@ -102,148 +121,156 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
     }
 
     private async getContainers(): Promise<PodmanItem[]> {
-        try {
-            const { stdout: containerStdout } = await execAsync(`${getPodmanPath()} container ls -a --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Labels}}"`);
-            const containers = containerStdout.split('\n')
-                .filter(line => line.trim() !== '')
-                .map(line => {
-                    const [id, name, status, labels] = line.split('|');
-                    const containerStatus = status || 'Unknown';
-                    const isRunning = containerStatus && typeof containerStatus === 'string' ? 
-                        containerStatus.startsWith('Up') : false;
-                    const containerLabels = labels || '';
-                    const isCompose = containerLabels.includes('com.docker.compose.project');
-                    const composeProject = isCompose ? this.extractComposeProject(containerLabels) : '';
-                    const composeFile = isCompose ? this.extractComposeFile(containerLabels) : '';
-                    
-                    return { 
-                        id: id || '', 
-                        name: name || id || 'unnamed', 
-                        status: containerStatus, 
-                        isRunning, 
-                        isCompose, 
-                        composeProject, 
-                        composeFile 
-                    };
-                });
+        return withStatus('Getting containers', async () => {
+            try {
+                const { stdout: containerStdout } = await execAsync(`${getPodmanPath()} container ls -a --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Labels}}"`);
+                const containers = containerStdout.split('\n')
+                    .filter((line: string) => line.trim() !== '')
+                    .map((line: string) => {
+                        const [id, name, status, labels] = line.split('|');
+                        const containerStatus = status || 'Unknown';
+                        const isRunning = containerStatus && typeof containerStatus === 'string' ? 
+                            containerStatus.startsWith('Up') : false;
+                        const containerLabels = labels || '';
+                        const isCompose = containerLabels.includes('com.docker.compose.project');
+                        const composeProject = isCompose ? this.extractComposeProject(containerLabels) : '';
+                        const composeFile = isCompose ? this.extractComposeFile(containerLabels) : '';
+                        
+                        return { 
+                            id: id || '', 
+                            name: name || id || 'unnamed', 
+                            status: containerStatus, 
+                            isRunning, 
+                            isCompose, 
+                            composeProject, 
+                            composeFile 
+                        } as ContainerInfo;
+                    });
 
-            const nonComposeContainers = containers
-                .filter(c => !c.isCompose && c.id) 
-                .map(c => new PodmanItem(
-                    `${c.name} (${c.id})`,
-                    vscode.TreeItemCollapsibleState.None,
-                    'container',
-                    c.id,
-                    c.status,
-                    c.isRunning
-                ));
+                const nonComposeContainers = containers
+                    .filter((c: ContainerInfo) => !c.isCompose && c.id) 
+                    .map((c: ContainerInfo) => new PodmanItem(
+                        `${c.name} (${c.id})`,
+                        vscode.TreeItemCollapsibleState.None,
+                        'container',
+                        c.id,
+                        c.status,
+                        c.isRunning
+                    ));
 
-            const composeGroups = this.getComposeGroups(containers);
+                const composeGroups = this.getComposeGroups(containers);
 
-            return [...nonComposeContainers, ...composeGroups];
-        } catch (error) {
-            console.error('Failed to get containers:', error);
-            vscode.window.showErrorMessage(`Failed to get containers: ${error}`);
-            return [];
-        }
+                return [...nonComposeContainers, ...composeGroups];
+            } catch (error) {
+                console.error('Failed to get containers:', error);
+                await showErrorWithCopy(`Failed to get containers: ${error}`, `${getPodmanPath()} container ls -a --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Labels}}"`);
+                throw error;
+            }
+        });
     }
 
     private async getImages(): Promise<PodmanItem[]> {
-        try {
-            const { stdout } = await execAsync(`${getPodmanPath()} image ls --format "{{.ID}}|{{.Repository}}|{{.Tag}}"`);
-            const imageMap = new Map<string, string[]>();
+        return withStatus('Getting images', async () => {
+            try {
+                const { stdout } = await execAsync(`${getPodmanPath()} image ls --format "{{.ID}}|{{.Repository}}|{{.Tag}}"`);
+                const imageMap = new Map<string, string[]>();
 
-            stdout.split('\n')
-                .filter(line => line.trim() !== '')
-                .forEach(line => {
-                    const [id, repository, tag] = line.split('|');
-                    if (repository !== "<none>" && tag !== "<none>") {
-                        if (!imageMap.has(id)) {
-                            imageMap.set(id, []);
+                stdout.split('\n')
+                    .filter((line: string) => line.trim() !== '')
+                    .forEach((line: string) => {
+                        const [id, repository, tag] = line.split('|');
+                        if (repository !== "<none>" && tag !== "<none>") {
+                            if (!imageMap.has(id)) {
+                                imageMap.set(id, []);
+                            }
+                            imageMap.get(id)!.push(`${repository}:${tag}`);
                         }
-                        imageMap.get(id)!.push(`${repository}:${tag}`);
-                    }
+                    });
+
+                const { stdout: containerStdout } = await execAsync(`${getPodmanPath()} container ls -a --format "{{.ImageID}}"`);
+                const usedImageIds = new Set(containerStdout.split('\n').filter((line: string) => line.trim() !== ''));
+
+                return Array.from(imageMap.entries()).map(([id, names]) => {
+                    const isUsed = usedImageIds.has(id);
+                    const label = names.length > 1
+                        ? `${id} (${names.length} tags)`
+                        : `${names[0]} (${id})`;
+                    const children = names.map((name, index) =>
+                        new PodmanItem(name, vscode.TreeItemCollapsibleState.None, 'image-tag', `${id}-tag-${index}`, id)
+                    );
+                    return new PodmanItem(
+                        label,
+                        names.length > 1 ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
+                        'image',
+                        id,
+                        id,
+                        undefined,
+                        undefined,
+                        children,
+                        isUsed
+                    );
                 });
-
-            const { stdout: containerStdout } = await execAsync(`${getPodmanPath()} container ls -a --format "{{.ImageID}}"`);
-            const usedImageIds = new Set(containerStdout.split('\n').filter(line => line.trim() !== ''));
-
-            return Array.from(imageMap.entries()).map(([id, names]) => {
-                const isUsed = usedImageIds.has(id);
-                const label = names.length > 1
-                    ? `${id} (${names.length} tags)`
-                    : `${names[0]} (${id})`;
-                const children = names.map((name, index) =>
-                    new PodmanItem(name, vscode.TreeItemCollapsibleState.None, 'image-tag', `${id}-tag-${index}`, id)
-                );
-                return new PodmanItem(
-                    label,
-                    names.length > 1 ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None,
-                    'image',
-                    id,
-                    id,
-                    undefined,
-                    undefined,
-                    children,
-                    isUsed
-                );
-            });
-        } catch (error) {
-            vscode.window.showErrorMessage('Failed to get images: ' + error);
-            return [];
-        }
+            } catch (error) {
+                await showErrorWithCopy(`Failed to get images: ${error}`, `${getPodmanPath()} image ls --format "{{.ID}}|{{.Repository}}|{{.Tag}}"`);
+                throw error;
+            }
+        });
     }
 
     private async getVolumes(): Promise<PodmanItem[]> {
-        try {
-            const { stdout } = await execAsync(`${getPodmanPath()} volume ls --format "{{.Name}}|{{.Driver}}"`);
-            return stdout.split('\n')
-                .filter(line => line.trim() !== '')
-                .map(line => {
-                    const [name, driver] = line.split('|');
-                    return new PodmanItem(
-                        `${name} (${driver})`,
-                        vscode.TreeItemCollapsibleState.None,
-                        'volume',
-                        `volume-${name}`,
-                        undefined,
-                        undefined,
-                        undefined,
-                        undefined,
-                        undefined,
-                        name  // Pass the actual volume name as resourceName
-                    );
-                });
-        } catch (error) {
-            vscode.window.showErrorMessage('Failed to get volumes: ' + error);
-            return [];
-        }
+        return withStatus('Getting volumes', async () => {
+            try {
+                const { stdout } = await execAsync(`${getPodmanPath()} volume ls --format "{{.Name}}|{{.Driver}}"`);
+                return stdout.split('\n')
+                    .filter((line: string) => line.trim() !== '')
+                    .map((line: string) => {
+                        const [name, driver] = line.split('|');
+                        return new PodmanItem(
+                            `${name} (${driver})`,
+                            vscode.TreeItemCollapsibleState.None,
+                            'volume',
+                            `volume-${name}`,
+                            undefined,
+                            undefined,
+                            undefined,
+                            undefined,
+                            undefined,
+                            name
+                        );
+                    });
+            } catch (error) {
+                await showErrorWithCopy(`Failed to get volumes: ${error}`, `${getPodmanPath()} volume ls --format "{{.Name}}|{{.Driver}}"`);
+                return [];
+            }
+        });
     }
 
     private async getNetworks(): Promise<PodmanItem[]> {
-        try {
-            const { stdout } = await execAsync(`${getPodmanPath()} network ls --format "{{.Name}}|{{.Driver}}"`);
-            return stdout.split('\n')
-                .filter(line => line.trim() !== '')
-                .map(line => {
-                    const [name, driver] = line.split('|');
-                    return new PodmanItem(
-                        `${name} (${driver})`,
-                        vscode.TreeItemCollapsibleState.None,
-                        'network',
-                        `network-${name}`,
-                        undefined,
-                        undefined,
-                        undefined,
-                        undefined,
-                        undefined,
-                        name  // Pass the actual network name as resourceName
-                    );
-                });
-        } catch (error) {
-            vscode.window.showErrorMessage('Failed to get networks: ' + error);
-            return [];
-        }
+        return withStatus('Getting networks', async () => {
+            try {
+                const { stdout } = await execAsync(`${getPodmanPath()} network ls --format "{{.Name}}|{{.Driver}}"`);
+                return stdout.split('\n')
+                    .filter((line: string) => line.trim() !== '')
+                    .map((line: string) => {
+                        const [name, driver] = line.split('|');
+                        return new PodmanItem(
+                            `${name} (${driver})`,
+                            vscode.TreeItemCollapsibleState.None,
+                            'network',
+                            `network-${name}`,
+                            undefined,
+                            undefined,
+                            undefined,
+                            undefined,
+                            undefined,
+                            name
+                        );
+                    });
+            } catch (error) {
+                await showErrorWithCopy(`Failed to get networks: ${error}`, `${getPodmanPath()} network ls --format "{{.Name}}|{{.Driver}}"`);
+                return [];
+            }
+        });
     }
 
     private getOverviewItems(): PodmanItem[] {
@@ -253,50 +280,71 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
             .map(line => new PodmanItem(line, vscode.TreeItemCollapsibleState.None, 'overview-item'));
     }
 
-    private async getPodContainers(podName: string): Promise<PodmanItem[]> {
-        try {
-            const { stdout } = await execAsync(`${getPodmanPath()} ps --filter "pod=${podName}" --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.CreatedAt}}"`);
-            return stdout.split('\n')
-                .filter(line => line.trim() !== '')
-                .map(line => {
-                    const [id, name, status, created] = line.split('|');
-                    return new PodmanItem(
-                        `${name} (${id})`,
-                        vscode.TreeItemCollapsibleState.None,
-                        'container',
-                        id,
-                        `Status: ${status}\nCreated: ${created}`,
-                        status.toLowerCase().includes('up')
-                    );
-                });
-        } catch (error) {
-            vscode.window.showErrorMessage(`Failed to get containers for pod ${podName}: ${error}`);
-            return [];
-        }
+    private async getPodContainers(podId: string): Promise<PodmanItem[]> {
+        return withStatus('Getting pod containers', async () => {
+            try {
+                const { stdout } = await execAsync(`${getPodmanPath()} ps --filter "pod=${podId}" --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.CreatedAt}}"`);
+                return stdout.split('\n')
+                    .filter((line: string) => line.trim() !== '')
+                    .map((line: string) => {
+                        const [id, name, status, created] = line.split('|');
+                        return new PodmanItem(
+                            `${name} (${id})`,
+                            vscode.TreeItemCollapsibleState.None,
+                            'container',
+                            id,
+                            `Status: ${status}\nCreated: ${created}`,
+                            status.toLowerCase().includes('up')
+                        );
+                    });
+            } catch (error) {
+                await showErrorWithCopy(`Failed to get containers for pod ${podId}: ${error}`, `${getPodmanPath()} ps --filter "pod=${podId}" --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.CreatedAt}}"`);
+                return [];
+            }
+        });
     }
 
-    private getComposeGroups(containers: any[]): PodmanItem[] {
-        const composeGroups = containers.reduce((groups: { [key: string]: any[] }, container) => {
+    private async getPods(): Promise<PodmanItem[]> {
+        return withStatus('Getting pods', async () => {
+            try {
+                const { stdout } = await execAsync(`${getPodmanPath()} pod ls --format "{{.ID}}|{{.Name}}|{{.Status}}|{{.Created}}"`);
+                return stdout.split('\n')
+                    .filter((line: string) => line.trim() !== '')
+                    .map((line: string) => {
+                        const [id, name, status, created] = line.split('|');
+                        return new PodmanItem(
+                            `${name} (${id})`,
+                            vscode.TreeItemCollapsibleState.Collapsed,
+                            'pod',
+                            id,
+                            `Status: ${status}\nCreated: ${created}`,
+                            status.toLowerCase().includes('running')
+                        );
+                    });
+            } catch (error) {
+                await showErrorWithCopy(`Failed to get pods: ${error}`, `${getPodmanPath()} pod ls --format "{{.ID}}|{{.Name}}|{{.Status}}|{{.Created}}"`);
+                return [];
+            }
+        });
+    }
+
+    private getComposeGroups(containers: ContainerInfo[]): PodmanItem[] {
+        const composeGroups = containers.reduce((groups: ComposeGroups, container) => {
             if (container.isCompose) {
                 const project = container.composeProject;
                 if (!groups[project]) {
-                    groups[project] = [];
+                    groups[project] = {
+                        containers: [],
+                        composeFile: container.composeFile || ''
+                    };
                 }
-                groups[project].push(container);
+                groups[project].containers.push(container);
             }
             return groups;
         }, {});
 
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders) {
-            return [];
-        }
-
-        const workingDir = workspaceFolders[0].uri.fsPath;
-        const composeFile = path.join(workingDir, 'docker-compose.yml');
-
-        return Object.entries(composeGroups).map(([project, containers]) => {
-            const children = containers.map((c: any) => {
+        return Object.entries(composeGroups).map(([project, group]) => {
+            const children = group.containers.map((c) => {
                 const uniqueId = `compose-${project}-${c.id}`;
                 if (this.registeredIds.has(uniqueId)) {
                     return null;
@@ -312,7 +360,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                     c.isRunning,
                     project
                 );
-            }).filter(Boolean) as PodmanItem[];
+            }).filter((child): child is PodmanItem => child !== null);
 
             return new PodmanItem(
                 `${project}`,
@@ -325,7 +373,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                 children,
                 undefined,
                 undefined,
-                composeFile
+                group.composeFile // Use the actual compose file path from the container labels
             );
         });
     }

@@ -7,6 +7,9 @@ import { PodmanTreeDataProvider } from './podmanTreeDataProvider';
 import { PodmanItem } from './podmanItem';
 import { createContainer } from './createContainer';
 import { createVolume, createNetwork } from './createResource';
+import { withStatus } from './statusBarManager';
+import { showErrorWithCopy } from './utils/messageUtil';
+import { QuickLinksProvider } from './quickLinksProvider';
 
 const execAsync = promisify(exec);
 const podmanTreeDataProvider = new PodmanTreeDataProvider();
@@ -14,6 +17,52 @@ const podmanTreeDataProvider = new PodmanTreeDataProvider();
 function getPodmanPath(): string {
     const config = vscode.workspace.getConfiguration('podmanager');
     return config.get('podmanPath', 'podman');
+}
+
+function getMachineName(): string {
+    const config = vscode.workspace.getConfiguration('podmanager');
+    return config.get<string>('machineName') || 'podman-machine-default';
+}
+
+async function checkPodmanMachineStatus(): Promise<boolean> {
+    const machineName = getMachineName();
+    try {
+        const result = await execAsync('podman machine list --format json');
+        const machines = JSON.parse(result.stdout);
+        const machine = machines.find((m: any) => m.Name === machineName);
+        return machine?.Running || false;
+    } catch (error) {
+        console.error('Error checking Podman machine status:', error);
+        return false;
+    }
+}
+
+async function startPodmanMachine() {
+    const machineName = getMachineName();
+    try {
+        const cmd = `podman machine start ${machineName}`;
+        await execAsync(cmd);
+        vscode.window.showInformationMessage(`Podman machine '${machineName}' started successfully`);
+    } catch (error) {
+        await showErrorWithCopy(
+            `Failed to start Podman machine '${machineName}': ${error}`, 
+            `podman machine start ${machineName}`
+        );
+    }
+}
+
+async function stopPodmanMachine() {
+    const machineName = getMachineName();
+    try {
+        const cmd = `podman machine stop ${machineName}`;
+        await execAsync(cmd);
+        vscode.window.showInformationMessage(`Podman machine '${machineName}' stopped successfully`);
+    } catch (error) {
+        await showErrorWithCopy(
+            `Failed to stop Podman machine '${machineName}': ${error}`, 
+            `podman machine stop ${machineName}`
+        );
+    }
 }
 
 async function resetPodmanPath() {
@@ -25,8 +74,16 @@ async function resetPodmanPath() {
 export function activate(context: vscode.ExtensionContext) {
     console.log('Podmanager extension is now active!');
 
+    // Initialize tree view providers
     const treeView = vscode.window.createTreeView('podmanView', { treeDataProvider: podmanTreeDataProvider });
-    context.subscriptions.push(treeView);
+    const quickLinksProvider = new QuickLinksProvider();
+    const quickLinksView = vscode.window.createTreeView('podmanLinks', { treeDataProvider: quickLinksProvider });
+    
+    context.subscriptions.push(treeView, quickLinksView);
+    
+    // Initialize and register the status bar manager for disposal
+    const { StatusBarManager } = require('./statusBarManager');
+    context.subscriptions.push(StatusBarManager.getInstance());
 
     const collapseAllCommand = vscode.commands.registerCommand('podmanager.collapseAll', () => {
         if (treeView.visible) {
@@ -63,75 +120,49 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('podmanager.createNetwork', createNetwork),
         vscode.commands.registerCommand('podmanager.buildImage', buildImage),
         vscode.commands.registerCommand('podmanager.viewContainerLogs', viewContainerLogs),
-        vscode.commands.registerCommand('podmanager.pushImage', async (item: PodmanItem) => {
+        // Add pod commands
+        vscode.commands.registerCommand('podmanager.startPod', async (item: PodmanItem) => {
             if (item.id) {
-                try {
-                    const config = vscode.workspace.getConfiguration('podmanager');
-                    if (!config.get('enablePushCommand')) {
-                        vscode.window.showInformationMessage('Push command is disabled in settings');
-                        return;
-                    }
-
-                    const imageName = item.label.split(' ')[0];
-                    const terminal = vscode.window.createTerminal(`Push Image: ${item.label}`);
-                    
-                    const defaultRegistry = config.get('pushDefaultRegistry');
-                    let pushCmd = `${getPodmanPath()} push`;
-
-                    if (defaultRegistry) {
-                        pushCmd += ` ${imageName} ${defaultRegistry}/${imageName}`;
-                    } else {
-                        pushCmd += ` ${imageName}`;
-                    }
-                    
-                    terminal.sendText(pushCmd);
-                    terminal.show();
-                } catch (error) {
-                    vscode.window.showErrorMessage(`Failed to push image ${item.id}: ${error}`);
+                await runPodCommand('start', item.id);
+                podmanTreeDataProvider.refresh();
+            }
+        }),
+        vscode.commands.registerCommand('podmanager.stopPod', async (item: PodmanItem) => {
+            if (item.id) {
+                await runPodCommand('stop', item.id);
+                podmanTreeDataProvider.refresh();
+            }
+        }),
+        vscode.commands.registerCommand('podmanager.restartPod', async (item: PodmanItem) => {
+            if (item.id) {
+                await runPodCommand('restart', item.id);
+                podmanTreeDataProvider.refresh();
+            }
+        }),
+        vscode.commands.registerCommand('podmanager.deletePod', async (item: PodmanItem) => {
+            if (item.id) {
+                const answer = await vscode.window.showWarningMessage(`Are you sure you want to delete pod ${item.id}?`, 'Yes', 'No');
+                if (answer === 'Yes') {
+                    await runPodCommand('rm', item.id, true);
+                    podmanTreeDataProvider.refresh();
                 }
             }
-        })
+        }),
+        vscode.commands.registerCommand('podmanager.openSettings', () => {
+            vscode.commands.executeCommand('workbench.action.openSettings', '@ext:dreamcatcher45.podmanager');
+        }),
+        vscode.commands.registerCommand('podmanager.openWebsite', () => {
+            vscode.env.openExternal(vscode.Uri.parse('https://pod-manager.pages.dev'));
+        }),
+        vscode.commands.registerCommand('podmanager.openDocs', () => {
+            vscode.env.openExternal(vscode.Uri.parse('https://pod-manager.pages.dev/docs'));
+        }),
+        vscode.commands.registerCommand('podmanager.openGitHub', () => {
+            vscode.env.openExternal(vscode.Uri.parse('https://github.com/dreamcatcher45/podmanager'));
+        }),
     ];
 
     context.subscriptions.push(...commands);
-
-    function getMachineName(): string {
-        const config = vscode.workspace.getConfiguration('podmanager');
-        return config.get<string>('machineName') || 'podman-machine-default';
-    }
-
-    async function checkPodmanMachineStatus(): Promise<boolean> {
-        const machineName = getMachineName();
-        try {
-            const result = await executeCommand('podman', ['machine', 'list', '--format', 'json']);
-            const machines = JSON.parse(result);
-            const machine = machines.find((m: any) => m.Name === machineName);
-            return machine?.Running || false;
-        } catch (error) {
-            console.error('Error checking Podman machine status:', error);
-            return false;
-        }
-    }
-
-    async function startPodmanMachine() {
-        const machineName = getMachineName();
-        try {
-            await executeCommand('podman', ['machine', 'start', machineName]);
-            vscode.window.showInformationMessage(`Podman machine '${machineName}' started successfully`);
-        } catch (error) {
-            vscode.window.showErrorMessage(`Failed to start Podman machine '${machineName}': ${error}`);
-        }
-    }
-
-    async function stopPodmanMachine() {
-        const machineName = getMachineName();
-        try {
-            await executeCommand('podman', ['machine', 'stop', machineName]);
-            vscode.window.showInformationMessage(`Podman machine '${machineName}' stopped successfully`);
-        } catch (error) {
-            vscode.window.showErrorMessage(`Failed to stop Podman machine '${machineName}': ${error}`);
-        }
-    }
 
     checkPodmanMachineStatus();
 }
@@ -162,13 +193,13 @@ async function buildImage(uri: vscode.Uri) {
     } else if (vscode.window.activeTextEditor) {
         dockerfilePath = vscode.window.activeTextEditor.document.uri.fsPath;
     } else {
-        vscode.window.showErrorMessage('No Dockerfile path could be determined. Please open the dockerfile');
+        await showErrorWithCopy('No Dockerfile path could be determined', 'Please open a Dockerfile in the editor');
         return;
     }
     const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(dockerfilePath));
 
     if (!workspaceFolder) {
-        vscode.window.showErrorMessage('Unable to determine workspace folder');
+        await showErrorWithCopy('Unable to determine workspace folder', 'Please open a workspace folder containing your Dockerfile');
         return;
     }
 
@@ -186,8 +217,8 @@ async function buildImage(uri: vscode.Uri) {
 
     vscode.window.showInformationMessage(`Building image ${imageName}...`);
 
+    const cmd = `${getPodmanPath()} build -t ${imageName} -f "${dockerfilePath}" "${buildContext}"`;
     try {
-        const cmd = `${getPodmanPath()} build -t ${imageName} -f "${dockerfilePath}" "${buildContext}"`;
         const { stdout, stderr } = await execAsync(cmd);
 
         if (stderr) {
@@ -199,7 +230,7 @@ async function buildImage(uri: vscode.Uri) {
         // Refresh the Podman view to show the new image
         vscode.commands.executeCommand('podmanager.refreshView');
     } catch (error) {
-        vscode.window.showErrorMessage(`Failed to build image: ${error}`);
+        await showErrorWithCopy(`Failed to build image: ${error}`, cmd);
     }
 }
 
@@ -210,17 +241,14 @@ async function runPruneCommand(command: string, description: string): Promise<vo
     );
 
     if (answer === 'Yes') {
-        try {
-            vscode.window.showInformationMessage(`Starting to ${description.toLowerCase()}...`);
+        await withStatus(description, async () => {
             const { stdout, stderr } = await execAsync(`${getPodmanPath()} ${command}`);
             if (stderr) {
                 vscode.window.showErrorMessage(`Error while pruning: ${stderr}`);
             } else {
                 vscode.window.showInformationMessage(`Successfully ${description.toLowerCase()}: ${stdout}`);
             }
-        } catch (error) {
-            vscode.window.showErrorMessage(`Failed to ${description.toLowerCase()}: ${error}`);
-        }
+        });
     }
 }
 
@@ -228,47 +256,39 @@ async function deleteContainer(item: PodmanItem) {
     const containerId = item.originalId || item.id;
     const answer = await vscode.window.showWarningMessage(`Are you sure you want to delete container ${containerId}?`, 'Yes', 'No');
     if (answer === 'Yes') {
-        try {
+        await withStatus(`Deleting container ${containerId}`, async () => {
             await execAsync(`${getPodmanPath()} container rm -f ${containerId}`);
             podmanTreeDataProvider.refresh();
             vscode.window.showInformationMessage(`Container ${containerId} deleted successfully`);
-        } catch (error) {
-            vscode.window.showErrorMessage(`Failed to delete container ${item.originalId || item.id}: ` + error);
-        }
+        });
     }
 }
 
 async function startContainer(item: PodmanItem) {
-    try {
-        const containerId = item.originalId || item.id;
+    const containerId = item.originalId || item.id;
+    await withStatus(`Starting container ${containerId}`, async () => {
         await execAsync(`${getPodmanPath()} container start ${containerId}`);
         podmanTreeDataProvider.refresh();
         vscode.window.showInformationMessage(`Container ${containerId} started successfully`);
-    } catch (error) {
-        vscode.window.showErrorMessage(`Failed to start container ${item.originalId || item.id}: ` + error);
-    }
+    });
 }
 
 async function stopContainer(item: PodmanItem) {
-    try {
-        const containerId = item.originalId || item.id;
+    const containerId = item.originalId || item.id;
+    await withStatus(`Stopping container ${containerId}`, async () => {
         await execAsync(`${getPodmanPath()} container stop ${containerId}`);
         podmanTreeDataProvider.refresh();
         vscode.window.showInformationMessage(`Container ${containerId} stopped successfully`);
-    } catch (error) {
-        vscode.window.showErrorMessage(`Failed to stop container ${item.originalId || item.id}: ` + error);
-    }
+    });
 }
 
 async function restartContainer(item: PodmanItem) {
-    try {
-        const containerId = item.originalId || item.id;
+    const containerId = item.originalId || item.id;
+    await withStatus(`Restarting container ${containerId}`, async () => {
         await execAsync(`${getPodmanPath()} container restart ${containerId}`);
         podmanTreeDataProvider.refresh();
         vscode.window.showInformationMessage(`Container ${containerId} restarted successfully`);
-    } catch (error) {
-        vscode.window.showErrorMessage(`Failed to restart container ${item.originalId || item.id}: ` + error);
-    }
+    });
 }
 
 async function openInTerminal(item: PodmanItem) {
@@ -279,7 +299,7 @@ async function openInTerminal(item: PodmanItem) {
             terminal.sendText(`${getPodmanPath()} exec -it ${containerId} /bin/sh`);
             terminal.show();
         } catch (error) {
-            vscode.window.showErrorMessage(`Failed to open terminal for container ${item.id}: ${error}`);
+            await showErrorWithCopy(`Failed to open terminal for container ${item.id}: ${error}`, `${getPodmanPath()} exec -it ${item.id} /bin/sh`);
         }
     }
 }
@@ -287,49 +307,43 @@ async function openInTerminal(item: PodmanItem) {
 async function deleteImage(item: PodmanItem) {
     const answer = await vscode.window.showWarningMessage(`Are you sure you want to delete image ${item.id}?`, 'Yes', 'No');
     if (answer === 'Yes') {
-        try {
+        await withStatus(`Deleting image ${item.id}`, async () => {
             await execAsync(`${getPodmanPath()} image rm -f ${item.id}`);
             podmanTreeDataProvider.refresh();
             vscode.window.showInformationMessage(`Image ${item.id} deleted successfully`);
-        } catch (error) {
-            vscode.window.showErrorMessage(`Failed to delete image ${item.id}: ` + error);
-        }
+        });
     }
 }
 
 async function deleteVolume(item: PodmanItem) {
     if (!item.resourceName) {
-        vscode.window.showErrorMessage('Unable to delete volume: Resource name is missing');
+        await showErrorWithCopy('Unable to delete volume: Resource name is missing', `${getPodmanPath()} volume rm -f <volume-name>`);
         return;
     }
     const answer = await vscode.window.showWarningMessage(`Are you sure you want to delete volume ${item.resourceName}?`, 'Yes', 'No');
     if (answer === 'Yes') {
-        try {
+        await withStatus(`Deleting volume ${item.resourceName}`, async () => {
             await execAsync(`${getPodmanPath()} volume rm -f ${item.resourceName}`);
             vscode.window.showInformationMessage(`Volume ${item.resourceName} deleted successfully`);
             // Refresh the tree view
             vscode.commands.executeCommand('podmanager.refreshView');
-        } catch (error) {
-            vscode.window.showErrorMessage(`Failed to delete volume ${item.resourceName}: ` + error);
-        }
+        });
     }
 }
 
 async function deleteNetwork(item: PodmanItem) {
     if (!item.resourceName) {
-        vscode.window.showErrorMessage('Unable to delete network: Resource name is missing');
+        await showErrorWithCopy('Unable to delete network: Resource name is missing', `${getPodmanPath()} network rm -f <network-name>`);
         return;
     }
     const answer = await vscode.window.showWarningMessage(`Are you sure you want to delete network ${item.resourceName}?`, 'Yes', 'No');
     if (answer === 'Yes') {
-        try {
+        await withStatus(`Deleting network ${item.resourceName}`, async () => {
             await execAsync(`${getPodmanPath()} network rm -f ${item.resourceName}`);
             vscode.window.showInformationMessage(`Network ${item.resourceName} deleted successfully`);
             // Refresh the tree view
             vscode.commands.executeCommand('podmanager.refreshView');
-        } catch (error) {
-            vscode.window.showErrorMessage(`Failed to delete network ${item.resourceName}: ` + error);
-        }
+        });
     }
 }
 
@@ -344,23 +358,33 @@ function extractContainerId(fullId: string): string {
 }
 
 async function composeUp(input?: vscode.Uri | PodmanItem) {
-    await runComposeCommand('up -d', input);
+    await withStatus('Running compose up', async () => {
+        await runComposeCommand('up -d', input);
+    });
 }
 
 async function composeDown(input?: vscode.Uri | PodmanItem) {
-    await runComposeCommand('down', input);
+    await withStatus('Running compose down', async () => {
+        await runComposeCommand('down', input);
+    });
 }
 
 async function composeStart(input?: vscode.Uri | PodmanItem) {
-    await runComposeCommand('start', input);
+    await withStatus('Starting compose services', async () => {
+        await runComposeCommand('start', input);
+    });
 }
 
 async function composeStop(input?: vscode.Uri | PodmanItem) {
-    await runComposeCommand('stop', input);
+    await withStatus('Stopping compose services', async () => {
+        await runComposeCommand('stop', input);
+    });
 }
 
 async function composeRestart(input?: vscode.Uri | PodmanItem) {
-    await runComposeCommand('restart', input);
+    await withStatus('Restarting compose services', async () => {
+        await runComposeCommand('restart', input);
+    });
 }
 
 function getComposePath(): string {
@@ -410,7 +434,8 @@ function buildComposeCommand(podmanPath: string, composeFile: string, projectNam
 async function runComposeCommand(command: string, input?: vscode.Uri | PodmanItem) {
     let composeFile: string | undefined;
     let workingDir: string | undefined;
-    let projectName: string;
+    let projectName: string = '';
+    let cmd: string;
 
     try {
         if (input instanceof vscode.Uri) {
@@ -424,7 +449,7 @@ async function runComposeCommand(command: string, input?: vscode.Uri | PodmanIte
         } else {
             const files = await vscode.workspace.findFiles('**/docker-compose.{yml,yaml}', '**/node_modules/**');
             if (files.length === 0) {
-                vscode.window.showErrorMessage('No docker-compose.yml file found in the workspace');
+                await showErrorWithCopy('No docker-compose.yml file found in the workspace', 'Please create a docker-compose.yml or docker-compose.yaml file in your workspace');
                 return;
             }
             composeFile = files[0].fsPath;
@@ -433,18 +458,17 @@ async function runComposeCommand(command: string, input?: vscode.Uri | PodmanIte
         }
 
         if (!composeFile) {
-            vscode.window.showErrorMessage('No compose file specified');
+            await showErrorWithCopy('No compose file specified', 'Please specify a docker-compose.yml file');
             return;
         }
 
         if (!workingDir) {
-            vscode.window.showErrorMessage('Could not determine working directory');
+            await showErrorWithCopy('Could not determine working directory', 'Please ensure your compose file is in a valid directory');
             return;
         }
 
+        cmd = buildComposeCommand(getPodmanPath(), composeFile, projectName, command);
         const options = { cwd: workingDir };
-        const cmd = buildComposeCommand(getPodmanPath(), composeFile, projectName, command);
-        
         const { stdout, stderr } = await execAsync(cmd, options);
 
         if (stderr) {
@@ -454,20 +478,25 @@ async function runComposeCommand(command: string, input?: vscode.Uri | PodmanIte
         }
         podmanTreeDataProvider.refresh();
     } catch (error) {
-        vscode.window.showErrorMessage(`Failed to execute Podman Compose ${command}: ${error}`);
+        const errorCmd = buildComposeCommand(getPodmanPath(), composeFile || '', projectName || '', command);
+        await showErrorWithCopy(
+            `Failed to execute Podman Compose ${command}: ${error}`, 
+            errorCmd
+        );
     }
 }
 
 async function runPodCommand(command: string, podId: string, force: boolean = false) {
     try {
         const forceFlag = force ? ' -f' : '';
-        const { stdout, stderr } = await execAsync(`${getPodmanPath()} pod ${command}${forceFlag} ${podId}`);
+        const cmd = `${getPodmanPath()} pod ${command}${forceFlag} ${podId}`;
+        const { stdout, stderr } = await execAsync(cmd);
         vscode.window.showInformationMessage(`Pod ${command} executed successfully`);
         if (stderr) {
-            vscode.window.showWarningMessage(`Pod ${command} completed with warnings: ${stderr}`);
+            await showErrorWithCopy(`Pod ${command} completed with warnings: ${stderr}`, cmd);
         }
     } catch (error) {
-        vscode.window.showErrorMessage(`Failed to execute pod ${command}: ${error}`);
+        await showErrorWithCopy(`Failed to execute pod ${command}: ${error}`, `${getPodmanPath()} pod ${command}${force ? ' -f' : ''} ${podId}`);
     }
 }
 
@@ -479,7 +508,7 @@ async function viewContainerLogs(item: PodmanItem) {
             terminal.sendText(`${getPodmanPath()} logs -f ${containerId}`);
             terminal.show();
         } catch (error) {
-            vscode.window.showErrorMessage(`Failed to view logs for container ${item.id}: ${error}`);
+            await showErrorWithCopy(`Failed to view logs for container ${item.id}: ${error}`, `${getPodmanPath()} logs -f ${item.id}`);
         }
     }
 }
