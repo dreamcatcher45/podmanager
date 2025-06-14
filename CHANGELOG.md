@@ -1,5 +1,21 @@
 # Changelog
 
+
+## [3.0.0] – 2025-06-14
+
+### Added
+
+- **Pod Management Support:**  
+  Integrated full support for managing pods directly within the extension.
+- **Workspace Flexibility:**  
+  Removed the requirement for all Podman Compose operations to be performed within a single workspace, enabling more flexible project management.
+- **Enhanced Error Notifications:**  
+  Introduced options to copy error messages and command outputs directly from error notifications for easier debugging.
+- **Action Status Updates:**  
+  Implemented real-time action status indicators in the status bar, providing users with immediate feedback on ongoing operations.
+- **Quick Links Section:**  
+  Added a dedicated quick links section for faster access to frequently used features and documentation.
+
 ## [2.0.6] - 2024-12-21
 ### Added
 - Podman push option for images (Disabled by default)
