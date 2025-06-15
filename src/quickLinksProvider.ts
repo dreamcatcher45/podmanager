@@ -27,7 +27,7 @@ export class QuickLinksProvider implements vscode.TreeDataProvider<QuickLinkItem
                 'Documentation',
                 'docs',
                 'View the documentation',
-                'https://pod-manager.pages.dev/docs',
+                'https://podmanagerdocs.pages.dev',
                 '$(book)'
             ),
             new QuickLinkItem(
