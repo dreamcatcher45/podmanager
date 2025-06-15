@@ -62,7 +62,7 @@ export class QuickLinksProvider implements vscode.TreeDataProvider<QuickLinkItem
                 'Support Project',
                 'support',
                 'Support this project',
-                'https://github.com/dreamcatcher45/podmanager/discussions',
+                'https://pod-manager.pages.dev/sponsor',
                 '$(heart)'
             )
         ];
