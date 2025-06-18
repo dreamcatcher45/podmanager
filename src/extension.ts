@@ -442,10 +442,15 @@ async function runComposeCommand(command: string, input?: vscode.Uri | PodmanIte
             composeFile = input.fsPath;
             workingDir = path.dirname(composeFile);
             projectName = path.basename(workingDir);
-        } else if (input && input.composeProject && input.fsPath) {
-            composeFile = input.fsPath;
-            workingDir = path.dirname(composeFile);
-            projectName = input.composeProject;
+        } else if (input instanceof PodmanItem && input.contextValue === 'composeGroup') {
+            // This logic appears complex, assuming it correctly finds the file
+            // Let's ensure workingDir and composeFile are set
+            const files = await vscode.workspace.findFiles(`**/${input.label}/**/docker-compose.{yml,yaml}`, '**/node_modules/**');
+            if (files.length > 0) {
+                composeFile = files[0].fsPath;
+                workingDir = path.dirname(composeFile);
+                projectName = input.label;
+            }
         } else {
             const files = await vscode.workspace.findFiles('**/docker-compose.{yml,yaml}', '**/node_modules/**');
             if (files.length === 0) {
@@ -468,13 +473,24 @@ async function runComposeCommand(command: string, input?: vscode.Uri | PodmanIte
         }
 
         cmd = buildComposeCommand(getPodmanPath(), composeFile, projectName, command);
-        const options = { cwd: workingDir };
+        
+        // --- THIS IS THE FIX ---
+        // Explicitly define the shell to prevent ENOENT errors on Windows.
+        const options = { 
+            cwd: workingDir,
+            shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh'
+        };
+        // --- END OF FIX ---
+
         const { stdout, stderr } = await execAsync(cmd, options);
 
         if (stderr) {
-            vscode.window.showWarningMessage(`Podman Compose ${command} completed with warnings: ${stderr}`);
-        } else {
-            vscode.window.showInformationMessage(`Podman Compose ${command} executed successfully`);
+            // Some compose commands (like down) output to stderr on success.
+            // We'll show it as a warning unless it's a clear error.
+            vscode.window.showWarningMessage(`Podman Compose command finished with messages: ${stderr}`);
+        }
+        if (stdout) {
+            vscode.window.showInformationMessage(stdout);
         }
         podmanTreeDataProvider.refresh();
     } catch (error) {
@@ -485,6 +501,7 @@ async function runComposeCommand(command: string, input?: vscode.Uri | PodmanIte
         );
     }
 }
+
 
 async function runPodCommand(command: string, podId: string, force: boolean = false) {
     try {

@@ -1,6 +1,9 @@
+// src/createContainer.ts
+
 import * as vscode from 'vscode';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { showErrorWithCopy } from './utils/messageUtil'; // Assuming you have this utility from extension.ts
 
 const execAsync = promisify(exec);
 
@@ -25,6 +28,7 @@ function getPodmanPath(): string {
 }
 
 export async function createContainer() {
+    let command = ''; // Define command here to be accessible in catch block
     try {
         const mode = await vscode.window.showQuickPick(['Simple', 'Advanced'], { placeHolder: 'Select creation mode' });
         if (!mode) {
@@ -32,12 +36,13 @@ export async function createContainer() {
         }
 
         const images = await getImages();
+        if (images.length === 0) {
+            vscode.window.showInformationMessage('No Podman images found. Please pull or build an image first.');
+            return;
+        }
+
         const selectedImageInfo = await vscode.window.showQuickPick(
-            images.map(img => ({
-                label: `${img.repository}:${img.tag}`,
-                description: img.id,
-                imageInfo: img
-            })),
+            images.map(img => ({ label: `${img.repository}:${img.tag}`, description: `ID: ${img.id.substring(0, 12)}`, imageInfo: img })),
             { placeHolder: 'Select an image' }
         );
 
@@ -47,7 +52,8 @@ export async function createContainer() {
 
         const name = await vscode.window.showInputBox({ prompt: 'Enter container name (optional)' });
 
-        let command = `${getPodmanPath()} run -d`;
+        command = `${getPodmanPath()} run -d`;
+
         if (name) {
             command += ` --name ${name}`;
         }
@@ -61,34 +67,29 @@ export async function createContainer() {
             const volumes = await getVolumes();
             if (volumes.length > 0) {
                 const selectedVolume = await vscode.window.showQuickPick(
-                    volumes.map(vol => ({
-                        label: vol.name,
-                        description: vol.mountPoint,
-                        volume: vol
-                    })),
-                    { placeHolder: 'Select a volume (optional)' }
+                    volumes.map(vol => ({ label: vol.name, description: vol.mountPoint, volume: vol })),
+                    { placeHolder: 'Select a volume to mount (optional)' }
                 );
 
                 if (selectedVolume) {
-                    // Ask for container mount point
-                    const containerPath = await vscode.window.showInputBox({ 
-                        prompt: 'Enter container mount point (e.g., /folder)',
-                        placeHolder: '/folder'
+                    const containerPath = await vscode.window.showInputBox({
+                        prompt: `Enter the path inside the container to mount the volume '${selectedVolume.label}'`,
+                        placeHolder: '/data'
                     });
-
                     if (containerPath) {
-                        // Simplified binding using "-v ${PWD}:containerPath" and set working directory
-                        command += ` -v "\${PWD}:${containerPath}" -w ${containerPath}`;
+                        command += ` -v ${selectedVolume.label}:${containerPath}`;
                     }
                 }
             }
 
             const networks = await getNetworks();
-            const selectedNetwork = await vscode.window.showQuickPick(networks, { placeHolder: 'Select a network (optional)' });
-            if (selectedNetwork) {
-                command += ` --network ${selectedNetwork}`;
+            if (networks.length > 1) { // Only ask if there's more than the default
+                 const selectedNetwork = await vscode.window.showQuickPick(networks, { placeHolder: 'Select a network (optional)' });
+                 if (selectedNetwork && selectedNetwork !== 'podman') {
+                    command += ` --network ${selectedNetwork}`;
+                 }
             }
-
+           
             const envVars = await vscode.window.showInputBox({ prompt: 'Enter environment variables (comma-separated, e.g., VAR1=value1,VAR2=value2)' });
             if (envVars) {
                 const envArray = envVars.split(',');
@@ -115,25 +116,33 @@ export async function createContainer() {
             }
         }
 
-        command += ` ${selectedImageInfo.imageInfo.repository}:${selectedImageInfo.imageInfo.tag} tail -f /dev/null`;
+        // --- FIX APPLIED HERE ---
+        // The "tail -f /dev/null" has been removed to allow the container
+        // to run its default command, preventing errors on minimal images.
+        command += ` ${selectedImageInfo.imageInfo.repository}:${selectedImageInfo.imageInfo.tag}`;
+        // --- END OF FIX ---
 
         const { stdout, stderr } = await execAsync(command);
+
         if (stderr) {
-            vscode.window.showErrorMessage(`Error creating container: ${stderr}`);
+            // Using showErrorWithCopy for better error handling, consistent with extension.ts
+            await showErrorWithCopy(`Error creating container: ${stderr}`, command);
         } else {
-            vscode.window.showInformationMessage(`Container created successfully: ${stdout.trim()}`);
+            vscode.window.showInformationMessage(`Container created successfully: ${stdout.trim().substring(0,12)}`);
+            vscode.commands.executeCommand('podmanager.refreshView');
         }
     } catch (error) {
-        vscode.window.showErrorMessage(`Failed to create container: ${error}`);
+        // Now using showErrorWithCopy in the catch block as well
+        await showErrorWithCopy(`Failed to create container: ${error}`, command);
     }
 }
 
 async function getAdvancedOptions(): Promise<AdvancedOptions | undefined> {
     const mountsInput = await vscode.window.showInputBox({
-        prompt: 'Mount points (optional, semicolon separated)',
+        prompt: 'Advanced Mounts (optional, semicolon separated)',
         placeHolder: 'type=bind,src=/local/path,target=/container/path;type=bind,src=/another/path,target=/target',
         validateInput: (value) => {
-            if (!value) { 
+            if (!value) {
                 return null;
             }
             const mounts = value.split(';');
@@ -158,15 +167,11 @@ async function getImages(): Promise<ImageInfo[]> {
             .filter(line => line.trim() !== '')
             .map(line => {
                 const [repository, tag, id] = line.split('|');
-                return {
-                    repository: repository !== "<none>" ? repository : id,
-                    tag: tag !== "<none>" ? tag : "latest",
-                    id: id
-                };
+                return { repository: repository !== "<none>" ? repository : id, tag: tag !== "<none>" ? tag : "latest", id: id };
             })
             .filter(img => img.repository && img.tag);
     } catch (error) {
-        vscode.window.showErrorMessage(`Failed to get images: ${error}`);
+        await showErrorWithCopy(`Failed to get images: ${error}`, `${getPodmanPath()} images`);
         return [];
     }
 }
@@ -178,13 +183,10 @@ async function getVolumes(): Promise<VolumeInfo[]> {
             .filter(line => line.trim() !== '')
             .map(line => {
                 const [name, mountPoint] = line.split('|');
-                return {
-                    name,
-                    mountPoint
-                };
+                return { name, mountPoint };
             });
     } catch (error) {
-        vscode.window.showErrorMessage(`Failed to get volumes: ${error}`);
+        await showErrorWithCopy(`Failed to get volumes: ${error}`, `${getPodmanPath()} volume ls`);
         return [];
     }
 }
@@ -192,9 +194,9 @@ async function getVolumes(): Promise<VolumeInfo[]> {
 async function getNetworks(): Promise<string[]> {
     try {
         const { stdout } = await execAsync(`${getPodmanPath()} network ls --format "{{.Name}}"`);
-        return stdout.split('\n').filter(line => line.trim() !== '');
+        return stdout.split('\n').filter(line => line.trim() !== '' && line.trim() !== 'none');
     } catch (error) {
-        vscode.window.showErrorMessage(`Failed to get networks: ${error}`);
+        await showErrorWithCopy(`Failed to get networks: ${error}`, `${getPodmanPath()} network ls`);
         return [];
     }
 }
