@@ -73,7 +73,26 @@ async function resetPodmanPath() {
     vscode.window.showInformationMessage('Podman path has been reset to default.');
 }
 
+// Persistent storage helpers for compose YAML paths
+function storeComposeYamlPath(projectName: string, filePath: string, context: vscode.ExtensionContext) {
+    const composePaths = context.globalState.get<{ [key: string]: string }>('podmanComposePaths', {});
+    composePaths[projectName] = filePath;
+    context.globalState.update('podmanComposePaths', composePaths);
+}
+
+function getComposeYamlPath(projectName: string, context: vscode.ExtensionContext): string | undefined {
+    const composePaths = context.globalState.get<{ [key: string]: string }>('podmanComposePaths', {});
+    return composePaths[projectName];
+}
+
+function getAllComposeYamlPaths(context: vscode.ExtensionContext): { [key: string]: string } {
+    return context.globalState.get<{ [key: string]: string }>('podmanComposePaths', {});
+}
+
+// Patch activate to capture context
+let extensionContext: vscode.ExtensionContext;
 export function activate(context: vscode.ExtensionContext) {
+    extensionContext = context;
     console.log('Podmanager extension is now active!');
 
     // Initialize tree view providers
@@ -421,77 +440,85 @@ async function runComposeCommand(command: string, input?: vscode.Uri | PodmanIte
     let cmd: string;
 
     try {
+        // Try to use stored path first if available
         if (input instanceof vscode.Uri) {
             composeFile = input.fsPath;
             workingDir = path.dirname(composeFile);
             projectName = path.basename(workingDir);
+            // Show status bar message and store path
+            vscode.window.setStatusBarMessage('saving path to storage', 2000);
+            storeComposeYamlPath(projectName, composeFile, extensionContext);
         } else if (input instanceof PodmanItem && input.contextValue === 'composeGroup') {
-            const files = await vscode.workspace.findFiles(`**/${input.label}/**/docker-compose.{yml,yaml}`, '**/node_modules/**');
-            if (files.length > 0) {
-                composeFile = files[0].fsPath;
+            projectName = input.label || '';
+            // Try stored path first
+            const stored = getComposeYamlPath(projectName, extensionContext);
+            if (stored && fs.existsSync(stored)) {
+                composeFile = stored;
                 workingDir = path.dirname(composeFile);
-                projectName = input.label;
+            } else {
+                const files = await vscode.workspace.findFiles(`**/${projectName}/**/docker-compose.{yml,yaml}`, '**/node_modules/**');
+                if (files.length > 0) {
+                    composeFile = files[0].fsPath;
+                    workingDir = path.dirname(composeFile);
+                    vscode.window.setStatusBarMessage('saving path to storage', 2000);
+                    storeComposeYamlPath(projectName, composeFile, extensionContext);
+                }
             }
         } else {
-            // Find all potential compose files in the workspace
-            const files = await vscode.workspace.findFiles('**/docker-compose.{yml,yaml}', '**/node_modules/**');
-            
-            if (files.length === 0) {
-                await showErrorWithCopy('No docker-compose.yml file found in the workspace', 'Please create a docker-compose.yml or docker-compose.yaml file in your workspace');
-                return;
-            } else if (files.length > 1) {
-                // If multiple files are found, prompt the user to choose one
-                const quickPickItems = files.map(file => ({
-                    label: vscode.workspace.asRelativePath(file),
-                    uri: file
-                }));
-                const selected = await vscode.window.showQuickPick(quickPickItems, {
-                    placeHolder: 'Multiple Compose files found. Select one to use.'
-                });
-                
-                if (selected) {
-                    composeFile = selected.uri.fsPath;
-                } else {
-                    // User cancelled the quick pick
-                    return;
-                }
-            } else {
-                // If only one file is found, use it automatically
-                composeFile = files[0].fsPath;
-            }
-            
-            // Determine working directory and project name from the selected file
-            if (composeFile) {
+            // Try all stored paths
+            const storedPaths = getAllComposeYamlPaths(extensionContext);
+            const validPaths = Object.entries(storedPaths).filter(([_, p]) => fs.existsSync(p));
+            if (validPaths.length === 1) {
+                [projectName, composeFile] = validPaths[0];
                 workingDir = path.dirname(composeFile);
-                projectName = path.basename(workingDir);
+            } else if (validPaths.length > 1) {
+                const pick = await vscode.window.showQuickPick(validPaths.map(([proj, file]) => ({ label: proj, description: file })), { placeHolder: 'Select a compose project' });
+                if (pick) {
+                    projectName = pick.label;
+                    composeFile = pick.description;
+                    workingDir = path.dirname(composeFile);
+                }
+            }
+            if (!composeFile) {
+                // Fallback to old logic
+                const files = await vscode.workspace.findFiles('**/docker-compose.{yml,yaml}', '**/node_modules/**');
+                if (files.length === 0) {
+                    await showErrorWithCopy('No docker-compose.yml file found in the workspace', 'Please create a docker-compose.yml or docker-compose.yaml file in your workspace');
+                    return;
+                } else if (files.length > 1) {
+                    const quickPickItems = files.map(file => ({ label: vscode.workspace.asRelativePath(file), uri: file }));
+                    const selected = await vscode.window.showQuickPick(quickPickItems, { placeHolder: 'Multiple Compose files found. Select one to use.' });
+                    if (selected) {
+                        composeFile = selected.uri.fsPath;
+                    } else {
+                        return;
+                    }
+                } else {
+                    composeFile = files[0].fsPath;
+                }
+                if (composeFile) {
+                    workingDir = path.dirname(composeFile);
+                    projectName = path.basename(workingDir);
+                    vscode.window.setStatusBarMessage('saving path to storage', 2000);
+                    storeComposeYamlPath(projectName, composeFile, extensionContext);
+                }
             }
         }
-
         if (!composeFile) {
             await showErrorWithCopy('No compose file specified or selected.', 'Please right-click a docker-compose.yml file or run the command from an open workspace.');
             return;
         }
-
         if (!workingDir) {
             await showErrorWithCopy('Could not determine working directory.', 'Please ensure your compose file is in a valid directory.');
             return;
         }
-
         cmd = buildComposeCommand(getPodmanPath(), composeFile, projectName, command);
-
-        // --- THIS IS THE FIX ---
-        // Explicitly define the shell to prevent ENOENT errors on Windows.
         const options = {
             cwd: workingDir,
             shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh'
         };
-        // --- END OF FIX ---
-
         const { stdout, stderr } = await execAsync(cmd, options);
-        
         if (stderr) {
-            // Some compose commands (like down) output to stderr on success.
-            // We'll show it as a warning unless it's a clear error.
             vscode.window.showWarningMessage(`Podman Compose command finished with messages: ${stderr}`);
         }
         if (stdout) {
@@ -506,7 +533,6 @@ async function runComposeCommand(command: string, input?: vscode.Uri | PodmanIte
         );
     }
 }
-
 
 async function runPodCommand(command: string, podId: string, force: boolean = false) {
     try {
