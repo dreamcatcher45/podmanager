@@ -1,3 +1,5 @@
+// src/extension.ts
+
 import * as vscode from 'vscode';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -45,7 +47,7 @@ async function startPodmanMachine() {
         vscode.window.showInformationMessage(`Podman machine '${machineName}' started successfully`);
     } catch (error) {
         await showErrorWithCopy(
-            `Failed to start Podman machine '${machineName}': ${error}`, 
+            `Failed to start Podman machine '${machineName}': ${error}`,
             `podman machine start ${machineName}`
         );
     }
@@ -59,7 +61,7 @@ async function stopPodmanMachine() {
         vscode.window.showInformationMessage(`Podman machine '${machineName}' stopped successfully`);
     } catch (error) {
         await showErrorWithCopy(
-            `Failed to stop Podman machine '${machineName}': ${error}`, 
+            `Failed to stop Podman machine '${machineName}': ${error}`,
             `podman machine stop ${machineName}`
         );
     }
@@ -78,9 +80,9 @@ export function activate(context: vscode.ExtensionContext) {
     const treeView = vscode.window.createTreeView('podmanView', { treeDataProvider: podmanTreeDataProvider });
     const quickLinksProvider = new QuickLinksProvider();
     const quickLinksView = vscode.window.createTreeView('podmanLinks', { treeDataProvider: quickLinksProvider });
-    
+
     context.subscriptions.push(treeView, quickLinksView);
-    
+
     // Initialize and register the status bar manager for disposal
     const { StatusBarManager } = require('./statusBarManager');
     context.subscriptions.push(StatusBarManager.getInstance());
@@ -161,9 +163,7 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.env.openExternal(vscode.Uri.parse('https://github.com/dreamcatcher45/podmanager'));
         }),
     ];
-
     context.subscriptions.push(...commands);
-
     checkPodmanMachineStatus();
 }
 
@@ -180,7 +180,6 @@ async function openToolsMenu() {
         ],
         { placeHolder: 'Select a Podman tool' }
     );
-
     if (selected) {
         vscode.commands.executeCommand(selected.command);
     }
@@ -196,37 +195,28 @@ async function buildImage(uri: vscode.Uri) {
         await showErrorWithCopy('No Dockerfile path could be determined', 'Please open a Dockerfile in the editor');
         return;
     }
-    const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(dockerfilePath));
 
+    const workspaceFolder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(dockerfilePath));
     if (!workspaceFolder) {
         await showErrorWithCopy('Unable to determine workspace folder', 'Please open a workspace folder containing your Dockerfile');
         return;
     }
 
-    const imageName = await vscode.window.showInputBox({
-        prompt: 'Enter a name for the image',
-        placeHolder: 'e.g., myapp:latest'
-    });
-
+    const imageName = await vscode.window.showInputBox({ prompt: 'Enter a name for the image', placeHolder: 'e.g., myapp:latest' });
     if (!imageName) {
         vscode.window.showInformationMessage('Image build cancelled');
         return;
     }
-
     const buildContext = path.dirname(dockerfilePath);
-
     vscode.window.showInformationMessage(`Building image ${imageName}...`);
-
     const cmd = `${getPodmanPath()} build -t ${imageName} -f "${dockerfilePath}" "${buildContext}"`;
     try {
         const { stdout, stderr } = await execAsync(cmd);
-
         if (stderr) {
             vscode.window.showWarningMessage(`Image build completed with warnings: ${stderr}`);
         } else {
             vscode.window.showInformationMessage(`Image ${imageName} built successfully`);
         }
-
         // Refresh the Podman view to show the new image
         vscode.commands.executeCommand('podmanager.refreshView');
     } catch (error) {
@@ -237,9 +227,9 @@ async function buildImage(uri: vscode.Uri) {
 async function runPruneCommand(command: string, description: string): Promise<void> {
     const answer = await vscode.window.showWarningMessage(
         `Are you sure you want to ${description.toLowerCase()}?`,
-        'Yes', 'No'
+        'Yes',
+        'No'
     );
-
     if (answer === 'Yes') {
         await withStatus(description, async () => {
             const { stdout, stderr } = await execAsync(`${getPodmanPath()} ${command}`);
@@ -362,25 +352,21 @@ async function composeUp(input?: vscode.Uri | PodmanItem) {
         await runComposeCommand('up -d', input);
     });
 }
-
 async function composeDown(input?: vscode.Uri | PodmanItem) {
     await withStatus('Running compose down', async () => {
         await runComposeCommand('down', input);
     });
 }
-
 async function composeStart(input?: vscode.Uri | PodmanItem) {
     await withStatus('Starting compose services', async () => {
         await runComposeCommand('start', input);
     });
 }
-
 async function composeStop(input?: vscode.Uri | PodmanItem) {
     await withStatus('Stopping compose services', async () => {
         await runComposeCommand('stop', input);
     });
 }
-
 async function composeRestart(input?: vscode.Uri | PodmanItem) {
     await withStatus('Restarting compose services', async () => {
         await runComposeCommand('restart', input);
@@ -402,15 +388,12 @@ function buildComposeCommand(podmanPath: string, composeFile: string, projectNam
         const composePath = getComposePath();
         const commandStyle = getComposeCommandStyle();
         const isRemoteFlag = podmanPath.includes('--remote');
-        
         // Remove --remote flag from podmanPath if present
         const cleanPodmanPath = podmanPath.replace('--remote', '').trim();
-        
         // If a custom compose path is specified and not empty, use it directly
         if (composePath && composePath !== 'podman-compose') {
             return `${composePath} -f "${composeFile}" -p "${projectName}" ${command}`;
         }
-        
         // Handle different command styles
         switch (commandStyle) {
             case 'podman-space-compose':
@@ -443,8 +426,6 @@ async function runComposeCommand(command: string, input?: vscode.Uri | PodmanIte
             workingDir = path.dirname(composeFile);
             projectName = path.basename(workingDir);
         } else if (input instanceof PodmanItem && input.contextValue === 'composeGroup') {
-            // This logic appears complex, assuming it correctly finds the file
-            // Let's ensure workingDir and composeFile are set
             const files = await vscode.workspace.findFiles(`**/${input.label}/**/docker-compose.{yml,yaml}`, '**/node_modules/**');
             if (files.length > 0) {
                 composeFile = files[0].fsPath;
@@ -452,38 +433,62 @@ async function runComposeCommand(command: string, input?: vscode.Uri | PodmanIte
                 projectName = input.label;
             }
         } else {
+            // Find all potential compose files in the workspace
             const files = await vscode.workspace.findFiles('**/docker-compose.{yml,yaml}', '**/node_modules/**');
+            
             if (files.length === 0) {
                 await showErrorWithCopy('No docker-compose.yml file found in the workspace', 'Please create a docker-compose.yml or docker-compose.yaml file in your workspace');
                 return;
+            } else if (files.length > 1) {
+                // If multiple files are found, prompt the user to choose one
+                const quickPickItems = files.map(file => ({
+                    label: vscode.workspace.asRelativePath(file),
+                    uri: file
+                }));
+                const selected = await vscode.window.showQuickPick(quickPickItems, {
+                    placeHolder: 'Multiple Compose files found. Select one to use.'
+                });
+                
+                if (selected) {
+                    composeFile = selected.uri.fsPath;
+                } else {
+                    // User cancelled the quick pick
+                    return;
+                }
+            } else {
+                // If only one file is found, use it automatically
+                composeFile = files[0].fsPath;
             }
-            composeFile = files[0].fsPath;
-            workingDir = path.dirname(composeFile);
-            projectName = path.basename(workingDir);
+            
+            // Determine working directory and project name from the selected file
+            if (composeFile) {
+                workingDir = path.dirname(composeFile);
+                projectName = path.basename(workingDir);
+            }
         }
 
         if (!composeFile) {
-            await showErrorWithCopy('No compose file specified', 'Please specify a docker-compose.yml file');
+            await showErrorWithCopy('No compose file specified or selected.', 'Please right-click a docker-compose.yml file or run the command from an open workspace.');
             return;
         }
 
         if (!workingDir) {
-            await showErrorWithCopy('Could not determine working directory', 'Please ensure your compose file is in a valid directory');
+            await showErrorWithCopy('Could not determine working directory.', 'Please ensure your compose file is in a valid directory.');
             return;
         }
 
         cmd = buildComposeCommand(getPodmanPath(), composeFile, projectName, command);
-        
+
         // --- THIS IS THE FIX ---
         // Explicitly define the shell to prevent ENOENT errors on Windows.
-        const options = { 
+        const options = {
             cwd: workingDir,
             shell: process.platform === 'win32' ? 'cmd.exe' : '/bin/sh'
         };
         // --- END OF FIX ---
 
         const { stdout, stderr } = await execAsync(cmd, options);
-
+        
         if (stderr) {
             // Some compose commands (like down) output to stderr on success.
             // We'll show it as a warning unless it's a clear error.
@@ -496,7 +501,7 @@ async function runComposeCommand(command: string, input?: vscode.Uri | PodmanIte
     } catch (error) {
         const errorCmd = buildComposeCommand(getPodmanPath(), composeFile || '', projectName || '', command);
         await showErrorWithCopy(
-            `Failed to execute Podman Compose ${command}: ${error}`, 
+            `Failed to execute Podman Compose ${command}: ${error}`,
             errorCmd
         );
     }
@@ -507,13 +512,11 @@ async function runPodCommand(command: string, podId: string, force: boolean = fa
     try {
         const forceFlag = force ? ' -f' : '';
         const cmd = `${getPodmanPath()} pod ${command}${forceFlag} ${podId}`;
-        const { stdout, stderr } = await execAsync(cmd);
-        vscode.window.showInformationMessage(`Pod ${command} executed successfully`);
-        if (stderr) {
-            await showErrorWithCopy(`Pod ${command} completed with warnings: ${stderr}`, cmd);
-        }
+        await execAsync(cmd);
+        vscode.window.showInformationMessage(`Pod ${command} command for ${podId} executed successfully.`);
     } catch (error) {
-        await showErrorWithCopy(`Failed to execute pod ${command}: ${error}`, `${getPodmanPath()} pod ${command}${force ? ' -f' : ''} ${podId}`);
+        const cmd = `${getPodmanPath()} pod ${command}${force ? ' -f' : ''} ${podId}`;
+        await showErrorWithCopy(`Failed to run pod command: ${error}`, cmd);
     }
 }
 
@@ -521,26 +524,25 @@ async function viewContainerLogs(item: PodmanItem) {
     if (item.id) {
         try {
             const containerId = extractContainerId(item.id);
-            const terminal = vscode.window.createTerminal(`Podman Logs: ${item.label}`);
-            terminal.sendText(`${getPodmanPath()} logs -f ${containerId}`);
-            terminal.show();
+            const cmd = `${getPodmanPath()} logs ${containerId}`;
+            const { stdout, stderr } = await execAsync(cmd);
+
+            if (stderr) {
+                vscode.window.showWarningMessage(`Error fetching logs for ${item.label}: ${stderr}`);
+            }
+
+            const outputChannel = vscode.window.createOutputChannel(`Podman Logs: ${item.label}`);
+            outputChannel.appendLine(`--- Logs for container ${item.label} (${containerId}) ---`);
+            outputChannel.append(stdout);
+            outputChannel.append(stderr);
+            outputChannel.show();
         } catch (error) {
-            await showErrorWithCopy(`Failed to view logs for container ${item.id}: ${error}`, `${getPodmanPath()} logs -f ${item.id}`);
+            await showErrorWithCopy(`Failed to fetch logs for container ${item.id}: ${error}`, `${getPodmanPath()} logs ${item.id}`);
         }
     }
 }
 
-async function executeCommand(command: string, args: string[] = []): Promise<string> {
-    try {
-        const { stdout, stderr } = await execAsync(`${command} ${args.join(' ')}`);
-        if (stderr) {
-            console.warn('Command warning:', stderr);
-        }
-        return stdout.trim();
-    } catch (error) {
-        console.error('Command error:', error);
-        throw error;
-    }
-}
 
-export function deactivate() { }
+export function deactivate() {
+    console.log('Podmanager extension is now deactivated.');
+}
