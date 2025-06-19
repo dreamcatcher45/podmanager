@@ -6,7 +6,7 @@
 
 - [Website](https://pod-manager.pages.dev)
 - [Documentation](https://podmanagerdocs.pages.dev/)
-- [Sponsorship](https://pod-manager.pages.dev/sponsor).
+- [Sponsorship](https://pod-manager.pages.dev/sponsor)
 - [GitHub Repository](https://github.com/dreamcatcher45/podmanager)
 
 If you find this project useful, please consider giving it a star ⭐ on GitHub! Your support helps me continue developing and improving this project.
@@ -126,6 +126,4 @@ Once the extension is installed:
 Contributions, issues, and feature requests are welcome! Feel free to check the [Issues page](https://github.com/dreamcatcher45/podmanager/issues) to report bugs or request features.
 
 
-**Sponsorship**
-
-If you're interested in sponsoring 💵 this project, please mention it in the [Discussion ](https://github.com/dreamcatcher45/podmanager/discussions) section on GitHub. Your support can make a significant difference!
+![Footer](media\footer.svg)
