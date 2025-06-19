@@ -126,4 +126,4 @@ Once the extension is installed:
 Contributions, issues, and feature requests are welcome! Feel free to check the [Issues page](https://github.com/dreamcatcher45/podmanager/issues) to report bugs or request features.
 
 
-![Footer](media\footer.svg)
+![Footer](media/footer.svg)
