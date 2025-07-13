@@ -8,7 +8,7 @@ const execAsync = promisify(exec)
 interface PodInfo {
     name: string;
     id: string;
-    host: string;
+    hostname: string;
     additionalhosts: string;
     cpuShare: string
 }
@@ -29,18 +29,22 @@ export async function createPod() {
             command += `  --name ${name}`;
         }
 
-        const host = await vscode.window.showInputBox
+        const hostname = await vscode.window.showInputBox({ prompt: 'Enter hostname or leave empty'})
+        if(hostname) {
+            command += `--hostname ${hostname}`
+        }
 
         const additionalhosts = await vscode.window.showInputBox({ prompt: 'Enter semicolon separated hostnames to additionaly add or leave empty' })
         if (additionalhosts) {
             command += `--add-host ${additionalhosts}`;
         } 
 
-
         const cpuShare = await vscode.window.showInputBox({ prompt: 'Enter cpu share (default is 1024) or leave empty' })
         if (cpuShare) {
             command += `--cpu-shares`
         }
+
+        
 
 
     } catch (error) {
