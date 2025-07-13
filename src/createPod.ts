@@ -1,3 +1,5 @@
+// src/createContainer.ts
+
 import * as vscode from 'vscode';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -44,7 +46,17 @@ export async function createPod() {
             command += `--cpu-shares`
         }
 
+        const { stdout, stderr } = await execAsync(command);
         
+        if (stderr) {
+            // Using showErrorWithCopy for better error handling, consistent with extension.ts
+            await showErrorWithCopy(`Error creating pod: ${stderr}`, command);
+        } else {
+            vscode.window.showInformationMessage(`Pod created successfully: ${stdout.trim().substring(0,12)}`);
+            vscode.commands.executeCommand('podmanager.refreshView');
+        }
+
+
 
 
     } catch (error) {
