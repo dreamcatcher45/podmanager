@@ -138,7 +138,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('podmanager.composeStop', composeStop),
         vscode.commands.registerCommand('podmanager.composeRestart', composeRestart),
         vscode.commands.registerCommand('podmanager.createContainer', createContainer),
-        vscode.commands.registerCommand('podmanaget.createPod', createPod)
+        vscode.commands.registerCommand('podmanaget.createPod', createPod),
         vscode.commands.registerCommand('podmanager.createVolume', createVolume),
         vscode.commands.registerCommand('podmanager.createNetwork', createNetwork),
         vscode.commands.registerCommand('podmanager.buildImage', buildImage),
