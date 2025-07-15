@@ -43,7 +43,7 @@ export async function createPod() {
 
         const cpuShare = await vscode.window.showInputBox({ prompt: 'Enter cpu share (default is 1024) or leave empty' })
         if (cpuShare) {
-            command += `--cpu-shares`
+            command += `--cpu-shares ${cpuShare}`;
         }
 
         const { stdout, stderr } = await execAsync(command);
