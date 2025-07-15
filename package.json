@@ -194,6 +194,11 @@
         "title": "Podman: Create Volume"
       },
       {
+        "command": "podmanager.createPod",
+        "title": "Create Pod",
+        "icon": "$(add)"
+      },
+      {
         "command": "podmanager.createNetwork",
         "title": "Podman: Create Network"
       },
