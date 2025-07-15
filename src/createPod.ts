@@ -28,7 +28,7 @@ export async function createPod() {
         command = `${getPodmanPath()} pod create`;
 
         if(name) {
-            command += `  --name ${name}`;
+            command += ` --name ${name}`;
         }
 
         const hostname = await vscode.window.showInputBox({ prompt: 'Enter hostname or leave empty'})
