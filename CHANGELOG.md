@@ -1,5 +1,8 @@
 # Changelog
 
+## [3.0.7] – 2025-06-14
+### Added
+- Add support for pod menu options
 
 ## [3.0.0] – 2025-06-14
 
