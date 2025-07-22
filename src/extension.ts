@@ -8,6 +8,7 @@ import * as path from 'path';
 import { PodmanTreeDataProvider } from './podmanTreeDataProvider';
 import { PodmanItem } from './podmanItem';
 import { createContainer } from './createContainer';
+import { createPod } from './createPod';
 import { createVolume, createNetwork } from './createResource';
 import { withStatus } from './statusBarManager';
 import { showErrorWithCopy } from './utils/messageUtil';
@@ -137,6 +138,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('podmanager.composeStop', composeStop),
         vscode.commands.registerCommand('podmanager.composeRestart', composeRestart),
         vscode.commands.registerCommand('podmanager.createContainer', createContainer),
+        vscode.commands.registerCommand('podmanager.createPod', createPod),
         vscode.commands.registerCommand('podmanager.createVolume', createVolume),
         vscode.commands.registerCommand('podmanager.createNetwork', createNetwork),
         vscode.commands.registerCommand('podmanager.buildImage', buildImage),
@@ -191,6 +193,7 @@ async function openToolsMenu() {
         [
             { label: 'Create Container', command: 'podmanager.createContainer' },
             { label: 'Create Volume', command: 'podmanager.createVolume' },
+            { label: 'Create Pod', command: 'podmanager.createPod'},
             { label: 'Create Network', command: 'podmanager.createNetwork' },
             { label: 'Prune Dangling Images', command: 'podmanager.pruneImages' },
             { label: 'Prune All Unused Images', command: 'podmanager.pruneAllImages' },
