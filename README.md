@@ -92,6 +92,7 @@ Once the extension is installed:
 - `Delete Container`: Remove a container
 - `Open in Terminal`: Open an interactive terminal in a container
 - `View Container Logs`: View real-time container logs
+- `Add Container to Pod`: Adds the the container to a pod
 
 #### Image Commands
 - `Build Image`: Build an image from a Dockerfile

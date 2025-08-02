@@ -127,6 +127,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('podmanager.startContainer', startContainer),
         vscode.commands.registerCommand('podmanager.stopContainer', stopContainer),
         vscode.commands.registerCommand('podmanager.restartContainer', restartContainer),
+        vscode.commands.registerCommand('podmanager.addContainertToPod', addContainerToPod),
         vscode.commands.registerCommand('podmanager.openInTerminal', openInTerminal),
         vscode.commands.registerCommand('podmanager.deleteImage', deleteImage),
         vscode.commands.registerCommand('podmanager.deleteVolume', deleteVolume),
@@ -298,6 +299,10 @@ async function restartContainer(item: PodmanItem) {
         podmanTreeDataProvider.refresh();
         vscode.window.showInformationMessage(`Container ${containerId} restarted successfully`);
     });
+}
+
+async function addContainerToPod(item: PodmanItem) {
+    const containerId = item.originalId || item.id;
 }
 
 async function openInTerminal(item: PodmanItem) {
