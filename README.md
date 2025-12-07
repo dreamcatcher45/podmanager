@@ -5,8 +5,6 @@
 ## Quick Links
 
 - [Website](https://pod-manager.pages.dev)
-- [Documentation](https://podmanagerdocs.pages.dev/)
-- [Sponsorship](https://pod-manager.pages.dev/sponsor)
 - [GitHub Repository](https://github.com/dreamcatcher45/podmanager)
 
 If you find this project useful, please consider giving it a star ⭐ on GitHub! Your support helps me continue developing and improving this project.

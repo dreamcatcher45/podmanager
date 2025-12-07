@@ -24,13 +24,6 @@ export class QuickLinksProvider implements vscode.TreeDataProvider<QuickLinkItem
                 '$(globe)'
             ),
             new QuickLinkItem(
-                'Documentation',
-                'docs',
-                'View the documentation',
-                'https://podmanagerdocs.pages.dev',
-                '$(book)'
-            ),
-            new QuickLinkItem(
                 'GitHub Repository',
                 'github',
                 'View the source code on GitHub',
@@ -57,13 +50,6 @@ export class QuickLinksProvider implements vscode.TreeDataProvider<QuickLinkItem
                 'Star this project on GitHub',
                 'https://github.com/dreamcatcher45/podmanager',
                 '$(star)'
-            ),
-            new QuickLinkItem(
-                'Support Project',
-                'support',
-                'Support this project',
-                'https://pod-manager.pages.dev/sponsor',
-                '$(heart)'
             )
         ];
 
