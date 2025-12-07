@@ -179,15 +179,13 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                     .filter((line: string) => line.trim() !== '')
                     .forEach((line: string) => {
                         const [id, repository, tag] = line.split('|');
-                        if (repository !== "<none>" && tag !== "<none>") {
-                            if (!imageMap.has(id)) {
-                                imageMap.set(id, []);
-                            }
-                            imageMap.get(id)!.push(`${repository}:${tag}`);
+                        if (!imageMap.has(id)) {
+                            imageMap.set(id, []);
                         }
+                        imageMap.get(id)!.push(`${repository}:${tag}`);
                     });
 
-                const { stdout: containerStdout } = await execAsync(`${getPodmanPath()} container ls -a --format "{{.ImageID}}"`);
+                const { stdout: containerStdout } = await execAsync(`${getPodmanPath()} container ls -a --format "{{if .ImageID}}{{.ImageID}}{{else}}none{{end}}"`);
                 const usedImageIds = new Set(containerStdout.split('\n').filter((line: string) => line.trim() !== ''));
 
                 return Array.from(imageMap.entries()).map(([id, names]) => {
