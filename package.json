@@ -2,7 +2,7 @@
   "name": "podmanager",
   "displayName": "Pod Manager",
   "description": "Manage Podman containers, images, volumes, and networks.",
-  "version": "3.0.9",
+  "version": "3.1.0",
   "publisher": "dreamcatcher45",
   "homepage": "https://pod-manager.pages.dev",
   "repository": {
@@ -246,36 +246,156 @@
         }
       ],
       "view/item/context": [
-        { "command": "podmanager.startContainer", "when": "view == podmanView && viewItem == container", "group": "inline" },
-        { "command": "podmanager.stopContainer", "when": "view == podmanView && viewItem == container", "group": "inline" },
-        { "command": "podmanager.restartContainer", "when": "view == podmanView && viewItem == container", "group": "inline" },
-        { "command": "podmanager.deleteContainer", "when": "view == podmanView && viewItem == container", "group": "inline" },
-        { "command": "podmanager.openInTerminal", "when": "view == podmanView && viewItem == container", "group": "inline" },
-        { "command": "podmanager.viewContainerLogs", "when": "view == podmanView && viewItem == container", "group": "inline" },
-        { "command": "podmanager.viewContainerLogs", "when": "view == podmanView && viewItem == container", "group": "inline" },
-        { "command": "podmanager.startContainer", "when": "view == podmanView && viewItem == compose-container", "group": "inline" },
-        { "command": "podmanager.stopContainer", "when": "view == podmanView && viewItem == compose-container", "group": "inline" },
-        { "command": "podmanager.restartContainer", "when": "view == podmanView && viewItem == compose-container", "group": "inline" },
-        { "command": "podmanager.deleteContainer", "when": "view == podmanView && viewItem == compose-container", "group": "inline" },
-        { "command": "podmanager.openInTerminal", "when": "view == podmanView && viewItem == compose-container", "group": "inline" },
-        { "command": "podmanager.viewContainerLogs", "when": "view == podmanView && viewItem == compose-container", "group": "inline" },
-        { "command": "podmanager.viewContainerLogs", "when": "view == podmanView && viewItem == compose-container", "group": "inline" },
-        { "command": "podmanager.deleteImage", "when": "view == podmanView && viewItem == image", "group": "inline" },
-        { "command": "podmanager.pushImage", "when": "view == podmanView && viewItem == image", "group": "inline" },
-        { "command": "podmanager.pushImage", "when": "view == podmanView && viewItem == image && config.podmanager.enablePushCommand", "group": "inline" },
-        { "command": "podmanager.pushImage", "when": "view == podmanView && viewItem == image && config.podmanager.enablePushCommand == true", "group": "inline" },
-        { "command": "podmanager.deleteVolume", "when": "view == podmanView && viewItem == volume", "group": "inline" },
-        { "command": "podmanager.deleteNetwork", "when": "view == podmanView && viewItem == network", "group": "inline" },
-        { "command": "podmanager.composeUp", "when": "view == podmanView && viewItem == compose-group", "group": "inline" },
-        { "command": "podmanager.composeDown", "when": "view == podmanView && viewItem == compose-group", "group": "inline" },
-        { "command": "podmanager.composeStart", "when": "view == podmanView && viewItem == compose-group", "group": "inline" },
-        { "command": "podmanager.composeStop", "when": "view == podmanView && viewItem == compose-group", "group": "inline" },
-        { "command": "podmanager.composeRestart", "when": "view == podmanView && viewItem == compose-group", "group": "inline" },
-        { "command": "podmanager.refreshOverview", "when": "view == podmanView && viewItem == overview", "group": "inline" },
-        { "command": "podmanager.startPod", "when": "view == podmanView && viewItem == pod", "group": "inline" },
-        { "command": "podmanager.stopPod", "when": "view == podmanView && viewItem == pod", "group": "inline" },
-        { "command": "podmanager.restartPod", "when": "view == podmanView && viewItem == pod", "group": "inline" },
-        { "command": "podmanager.deletePod", "when": "view == podmanView && viewItem == pod", "group": "inline" }
+        {
+          "command": "podmanager.startContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.stopContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.restartContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.deleteContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.openInTerminal",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.viewContainerLogs",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.viewContainerLogs",
+          "when": "view == podmanView && viewItem == container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.startContainer",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.stopContainer",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.restartContainer",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.deleteContainer",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.openInTerminal",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.viewContainerLogs",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.viewContainerLogs",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.deleteImage",
+          "when": "view == podmanView && viewItem == image",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.pushImage",
+          "when": "view == podmanView && viewItem == image",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.pushImage",
+          "when": "view == podmanView && viewItem == image && config.podmanager.enablePushCommand",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.pushImage",
+          "when": "view == podmanView && viewItem == image && config.podmanager.enablePushCommand == true",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.deleteVolume",
+          "when": "view == podmanView && viewItem == volume",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.deleteNetwork",
+          "when": "view == podmanView && viewItem == network",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.composeUp",
+          "when": "view == podmanView && viewItem == compose-group",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.composeDown",
+          "when": "view == podmanView && viewItem == compose-group",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.composeStart",
+          "when": "view == podmanView && viewItem == compose-group",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.composeStop",
+          "when": "view == podmanView && viewItem == compose-group",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.composeRestart",
+          "when": "view == podmanView && viewItem == compose-group",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.refreshOverview",
+          "when": "view == podmanView && viewItem == overview",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.startPod",
+          "when": "view == podmanView && viewItem == pod",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.stopPod",
+          "when": "view == podmanView && viewItem == pod",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.restartPod",
+          "when": "view == podmanView && viewItem == pod",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.deletePod",
+          "when": "view == podmanView && viewItem == pod",
+          "group": "inline"
+        }
       ],
       "explorer/context": [
         {
@@ -327,6 +447,11 @@
           "type": "string",
           "default": "podman-machine-default",
           "description": "Name of the Podman machine to connect to"
+        },
+        "podmanager.confirmDeletions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ask for confirmation before deleting resources (pods, images, containers, volumes, networks). Uncheck to skip confirmation."
         }
       }
     }
