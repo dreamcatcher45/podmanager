@@ -4,57 +4,77 @@
 
 ## Quick Links
 
-- [Website](https://pod-manager.pages.dev)
-- [GitHub Repository](https://github.com/dreamcatcher45/podmanager)
+* [Website](https://pod-manager.pages.dev)
+* [GitHub Repository](https://github.com/dreamcatcher45/podmanager)
 
 If you find this project useful, please consider giving it a star ⭐ on GitHub! Your support helps me continue developing and improving this project.
 
-
 ## Features
 
-- **Manage Podman Resources**: Comprehensive management of containers, images, volumes, networks, and pods.
-- **Podman Machine Control**: 
-  - Start and stop your Podman machine directly from VSCode
-  - Machine status monitoring
-  - Configurable machine name support
-- **Container Management**: 
-  - Start, stop, and restart containers
-  - Delete containers with force option
-  - Interactive terminal access to containers
-  - View container logs in real-time
-  - Execute commands in containers
-- **Image Management**:
-  - Build images from Dockerfile
-  - Remove images with force option
-  - Prune dangling images
-  - Prune all unused images
-  - Prune builder cache
-- **Volume Management**:
-  - Create new volumes
-  - Delete volumes with force option
-  - View volume details
-- **Network Management**:
-  - Create new networks
-  - Delete networks with force option
-  - View network details
-- **Pod Management**:
-  - Start, stop, and restart pods
-  - Delete pods with force option
-  - View pod details and status
-- **Docker/Podman Compose Support**: 
-  - Up, down, start, stop, and restart compose services
-  - Support for both docker-compose.yml and docker-compose.yaml
-  - Project name detection
-  - Multiple compose file support
-  - Configurable compose command style
-  - Remote compose support
-- **Tools and Utilities**:
-  - Quick access tools menu
-  - Customizable Podman path
-  - Status bar integration
-  - Error handling with copy-to-clipboard support
-  - Collapsible tree view
-  - Auto-refresh capability
+* **Manage Podman Resources**: Comprehensive management of containers, images, volumes, networks, and pods.
+* **Podman Machine Control**:
+* Start and stop your Podman machine directly from VSCode
+* Machine status monitoring
+* Configurable machine name support
+
+
+* **Container Management**:
+* **Simple & Advanced Creation**: Choose between quick setup or advanced configuration (ports, volumes, networks, env vars, CPU/Memory limits, and custom mounts).
+* Start, stop, and restart containers
+* Delete containers with force option
+* Interactive terminal access to containers
+* **Flexible Logging**: View logs in the Output panel or a dedicated Terminal.
+* Execute commands in containers
+
+
+* **Image Management**:
+* Build images from Dockerfile
+* **Push Images**: Push images to a registry with support for default registry settings.
+* Remove images with force option
+* Prune dangling images
+* Prune all unused images
+* Prune builder cache
+
+
+* **Volume Management**:
+* Create new volumes
+* Delete volumes with force option
+* View volume details
+
+
+* **Network Management**:
+* Create new networks
+* Delete networks with force option
+* View network details
+
+
+* **Pod Management**:
+* **Advanced Pod Creation**: Configure name, hostname, additional hosts, and CPU shares.
+* Start, stop, and restart pods
+* Delete pods with force option
+* View pod details and status
+
+
+* **Docker/Podman Compose Support**:
+* Up, down, start, stop, and restart compose services
+* Support for both docker-compose.yml and docker-compose.yaml
+* Project name detection
+* **Smart Path Persistence**: Remembers the location of your compose files for quick access.
+* Multiple compose file support
+* Configurable compose command style
+* Remote compose support
+
+
+* **Tools and Utilities**:
+* **Quick Links Sidebar**: Easy access to documentation, issues, and settings.
+* Quick access tools menu
+* Customizable Podman path
+* Status bar integration with operation progress
+* Error handling with copy-to-clipboard support
+* Collapsible tree view with "Collapse All" support
+* Auto-refresh capability
+
+
 
 ## Installation
 
@@ -72,53 +92,76 @@ Once the extension is installed:
 ### Available Commands
 
 #### General Commands
-- `Refresh View`: Refresh the entire Podman resources view
-- `Refresh Overview`: Update the overview section
-- `Open Tools Menu`: Access quick tools and actions
-- `Reset Podman Path`: Reset Podman path to default
-- `Collapse All`: Collapse all expandable elements in the tree view
+
+* `Refresh View`: Refresh the entire Podman resources view
+* `Refresh Overview`: Update the overview section
+* `Open Tools Menu`: Access quick tools and actions
+* `Reset Podman Path`: Reset Podman path to default
+* `Collapse All`: Collapse all expandable elements in the tree view
 
 #### Machine Management
-- `Start Podman Machine`: Start the configured Podman machine
-- `Stop Podman Machine`: Stop the running Podman machine
+
+* `Start Podman Machine`: Start the configured Podman machine
+* `Stop Podman Machine`: Stop the running Podman machine
 
 #### Container Commands
-- `Create Container`: Create a new container
-- `Start Container`: Start a stopped container
-- `Stop Container`: Stop a running container
-- `Restart Container`: Restart a container
-- `Delete Container`: Remove a container
-- `Open in Terminal`: Open an interactive terminal in a container
-- `View Container Logs`: View real-time container logs
-- `Add Container to Pod`: Adds the the container to a pod
+
+* `Create Container`: Create a new container (Supports Simple/Advanced modes)
+* `Start Container`: Start a stopped container
+* `Stop Container`: Stop a running container
+* `Restart Container`: Restart a container
+* `Delete Container`: Remove a container
+* `Open in Terminal`: Open an interactive terminal in a container
+* `View Container Logs`: View real-time container logs
+* `Add Container to Pod`: Adds the container to a pod
 
 #### Image Commands
-- `Build Image`: Build an image from a Dockerfile
-- `Delete Image`: Remove an image
-- `Prune Images`: Remove all dangling images
-- `Prune All Images`: Remove all unused images
-- `Prune Builder Cache`: Clear the Podman builder cache
+
+* `Build Image`: Build an image from a Dockerfile
+* `Push Image`: Push an image to a registry
+* `Delete Image`: Remove an image
+* `Prune Images`: Remove all dangling images
+* `Prune All Images`: Remove all unused images
+* `Prune Builder Cache`: Clear the Podman builder cache
 
 #### Volume Commands
-- `Create Volume`: Create a new volume
-- `Delete Volume`: Remove a volume
+
+* `Create Volume`: Create a new volume
+* `Delete Volume`: Remove a volume
 
 #### Network Commands
-- `Create Network`: Create a new network
-- `Delete Network`: Remove a network
+
+* `Create Network`: Create a new network
+* `Delete Network`: Remove a network
 
 #### Pod Commands
-- `Start Pod`: Start a pod
-- `Stop Pod`: Stop a running pod
-- `Restart Pod`: Restart a pod
-- `Delete Pod`: Remove a pod
+
+* `Start Pod`: Start a pod
+* `Stop Pod`: Stop a running pod
+* `Restart Pod`: Restart a pod
+* `Delete Pod`: Remove a pod
 
 #### Compose Commands
-- `Compose Up`: Create and start compose services
-- `Compose Down`: Stop and remove compose services
-- `Compose Start`: Start existing compose services
-- `Compose Stop`: Stop running compose services
-- `Compose Restart`: Restart compose services
+
+* `Compose Up`: Create and start compose services
+* `Compose Down`: Stop and remove compose services
+* `Compose Start`: Start existing compose services
+* `Compose Stop`: Stop running compose services
+* `Compose Restart`: Restart compose services
+* `Register Compose Files`: Manually register compose paths for the session
+
+## Configuration
+
+You can customize Podmanager via VSCode Settings (`Ctrl+,`):
+
+* `podmanager.podmanPath`: Custom path to the podman executable.
+* `podmanager.composePath`: Custom path to the compose executable.
+* `podmanager.composeCommandStyle`: Choose between `default`, `podman-compose`, or `podman compose`.
+* `podmanager.confirmDeletions`: Enable/disable confirmation prompts for resource deletion.
+* `podmanager.logsOutput`: Choose where logs are shown (`outputChannel` or `terminal`).
+* `podmanager.enablePushCommand`: Enable or disable the image push feature.
+* `podmanager.pushDefaultRegistry`: Set a default registry for pushing images.
+* `podmanager.machineName`: Specify the Podman machine name.
 
 ## Contributing
 
