@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.1.1] – 2025-12-24
+### Added
+- Added `podmanager.logsOutput` setting to choose where container logs are shown: `outputChannel` (default) or `terminal`.
+- `View Logs` action now respects this setting: selecting `terminal` opens a new terminal running `podman logs -f <container-id>` for live output, while `outputChannel` shows a one-time dump in the Output panel.
+
 ## [3.0.7] – 2025-06-14
 ### Added
 - Add support for pod menu options

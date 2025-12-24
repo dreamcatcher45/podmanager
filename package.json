@@ -2,7 +2,7 @@
   "name": "podmanager",
   "displayName": "Pod Manager",
   "description": "Manage Podman containers, images, volumes, and networks.",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "publisher": "dreamcatcher45",
   "homepage": "https://pod-manager.pages.dev",
   "repository": {
@@ -452,6 +452,16 @@
           "type": "boolean",
           "default": true,
           "description": "Ask for confirmation before deleting resources (pods, images, containers, volumes, networks). Uncheck to skip confirmation."
+        }
+        ,
+        "podmanager.logsOutput": {
+          "type": "string",
+          "default": "outputChannel",
+          "enum": [
+            "outputChannel",
+            "terminal"
+          ],
+          "description": "Choose where container logs are shown: 'outputChannel' uses the Output panel, 'terminal' opens a new terminal. Default: outputChannel."
         }
       }
     }

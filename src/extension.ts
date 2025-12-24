@@ -621,20 +621,31 @@ async function viewContainerLogs(item: PodmanItem) {
     if (item.id) {
         try {
             const containerId = extractContainerId(item.id);
-            const cmd = `${getPodmanPath()} logs ${containerId}`;
-            const { stdout, stderr } = await execAsync(cmd);
 
-            if (stderr) {
-                vscode.window.showWarningMessage(`Error fetching logs for ${item.label}: ${stderr}`);
+            const config = vscode.workspace.getConfiguration('podmanager');
+            const outputMode = config.get<string>('logsOutput', 'outputChannel');
+
+            if (outputMode === 'terminal') {
+                const cmd = `${getPodmanPath()} logs -f ${containerId}`;
+                const terminal = vscode.window.createTerminal(`Podman Logs: ${item.label}`);
+                terminal.sendText(cmd);
+                terminal.show();
+            } else {
+                const cmd = `${getPodmanPath()} logs ${containerId}`;
+                const { stdout, stderr } = await execAsync(cmd);
+
+                if (stderr) {
+                    vscode.window.showWarningMessage(`Error fetching logs for ${item.label}: ${stderr}`);
+                }
+
+                const outputChannel = vscode.window.createOutputChannel(`Podman Logs: ${item.label}`);
+                outputChannel.appendLine(`--- Logs for container ${item.label} (${containerId}) ---`);
+                outputChannel.append(stdout);
+                outputChannel.append(stderr);
+                outputChannel.show();
             }
-
-            const outputChannel = vscode.window.createOutputChannel(`Podman Logs: ${item.label}`);
-            outputChannel.appendLine(`--- Logs for container ${item.label} (${containerId}) ---`);
-            outputChannel.append(stdout);
-            outputChannel.append(stderr);
-            outputChannel.show();
         } catch (error) {
-            await showErrorWithCopy(`Failed to fetch logs for container ${item.id}: ${error}`, `${getPodmanPath()} logs ${item.id}`);
+            await showErrorWithCopy(`Failed to fetch/open logs for container ${item.id}: ${error}`, `${getPodmanPath()} logs ${item.id}`);
         }
     }
 }
