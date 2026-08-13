@@ -26,12 +26,13 @@ export class PodmanItem extends vscode.TreeItem {
             this.id = `compose-${this.composeProject}-${this.id}`;
         }
         
+        
         this.iconPath = this.getIconPath();
         this.tooltip = this.getTooltip();
         this.command = this.getCommand();
     }
 
-    private getIconPath(): vscode.ThemeIcon | { light: string; dark: string } | undefined {
+    private getIconPath(): vscode.ThemeIcon | undefined {
         switch (this.contextValue) {
             case 'pod':
                 return new vscode.ThemeIcon('symbol-namespace', new vscode.ThemeColor(this.status?.toLowerCase().includes('running') ? 'charts.green' : 'charts.red'));
