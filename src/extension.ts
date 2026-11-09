@@ -48,6 +48,7 @@ async function getPodmanMachineState(): Promise<boolean | undefined> {
 /** Briefly show the machine state in the status bar (silent when there is no such machine). */
 async function reportPodmanMachineStatus(): Promise<void> {
     const state = await getPodmanMachineState();
+    setMachineContext('machineRunning', state === true);
     if (state !== undefined) {
         StatusBarManager.getInstance().showStatus(`Podman machine '${getMachineName()}': ${state ? 'running' : 'stopped'}`, false);
     }
@@ -69,31 +70,37 @@ async function showPodmanMachineStatus(): Promise<void> {
     }
 }
 
-async function startPodmanMachine() {
+// Title-bar toggle: Start <-> Stop, with a spinner while a start/stop is running.
+let machineBusy = false;
+
+function setMachineContext(key: 'machineRunning' | 'machineBusy', value: boolean): void {
+    void vscode.commands.executeCommand('setContext', `podmanager.${key}`, value);
+}
+
+async function toggleMachine(action: 'start' | 'stop') {
+    if (machineBusy) {
+        return; // ignore repeated clicks while a start/stop is in progress
+    }
+    machineBusy = true;
+    setMachineContext('machineBusy', true);
     try {
         const machineName = getMachineName();
-        await runPodman(['machine', 'start', machineName]);
-        vscode.window.showInformationMessage(`Podman machine '${machineName}' started successfully`);
+        await runPodman(['machine', action, machineName]);
+        setMachineContext('machineRunning', action === 'start');
+        vscode.window.showInformationMessage(`Podman machine '${machineName}' ${action === 'start' ? 'started' : 'stopped'} successfully`);
     } catch (error) {
         await showErrorWithCopy(
-            `Failed to start Podman machine: ${error}`,
-            describePodman(['machine', 'start', '<machine-name>'])
+            `Failed to ${action} Podman machine: ${error}`,
+            describePodman(['machine', action, '<machine-name>'])
         );
+    } finally {
+        machineBusy = false;
+        setMachineContext('machineBusy', false);
     }
 }
 
-async function stopPodmanMachine() {
-    try {
-        const machineName = getMachineName();
-        await runPodman(['machine', 'stop', machineName]);
-        vscode.window.showInformationMessage(`Podman machine '${machineName}' stopped successfully`);
-    } catch (error) {
-        await showErrorWithCopy(
-            `Failed to stop Podman machine: ${error}`,
-            describePodman(['machine', 'stop', '<machine-name>'])
-        );
-    }
-}
+const startPodmanMachine = () => toggleMachine('start');
+const stopPodmanMachine = () => toggleMachine('stop');
 
 async function resetPodmanPath() {
     const config = vscode.workspace.getConfiguration('podmanager');
@@ -157,6 +164,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('podmanager.resetPodmanPath', resetPodmanPath),
         vscode.commands.registerCommand('podmanager.startPodmanMachine', startPodmanMachine),
         vscode.commands.registerCommand('podmanager.stopPodmanMachine', stopPodmanMachine),
+        vscode.commands.registerCommand('podmanager.machineBusy', () => undefined), // spinner placeholder, not clickable
         vscode.commands.registerCommand('podmanager.showMachineStatus', showPodmanMachineStatus),
         vscode.commands.registerCommand('podmanager.showWhatsNew', () => openWhatsNew(context.extensionUri)),
         vscode.commands.registerCommand('podmanager.registerComposeFiles', registerComposeFiles),

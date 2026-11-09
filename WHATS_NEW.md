@@ -35,6 +35,8 @@ These features were described in the documentation but did not work before:
 - Right-click menu entries for every action, a Documentation link, and **Reset Podman Path** in the Command Palette
 - Optional **auto-refresh**: set `podmanager.autoRefreshInterval` to a number of seconds (off by default)
 
+The machine button in the title bar is now one **toggle**: Start becomes Stop (with a matching icon) while the machine runs, shows a spinner during the action, and ignores repeated clicks.
+
 Fixed along the way: compose actions on a compose group in the tree, the Push icon showing while push was disabled, and Create Pod options being run together.
 
 ## Good to know

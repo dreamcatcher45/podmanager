@@ -235,7 +235,12 @@
       {
         "command": "podmanager.stopPodmanMachine",
         "title": "Stop Podman Machine",
-        "icon": "$(debug-stop)"
+        "icon": "$(vm-active)"
+      },
+      {
+        "command": "podmanager.machineBusy",
+        "title": "Podman Machine: working...",
+        "icon": "$(loading~spin)"
       },
       {
         "command": "podmanager.showMachineStatus",
@@ -280,12 +285,17 @@
         },
         {
           "command": "podmanager.startPodmanMachine",
-          "when": "view == podmanView",
+          "when": "view == podmanView && !podmanager.machineBusy && !podmanager.machineRunning",
           "group": "navigation"
         },
         {
           "command": "podmanager.stopPodmanMachine",
-          "when": "view == podmanView",
+          "when": "view == podmanView && !podmanager.machineBusy && podmanager.machineRunning",
+          "group": "navigation"
+        },
+        {
+          "command": "podmanager.machineBusy",
+          "when": "view == podmanView && podmanager.machineBusy",
           "group": "navigation"
         },
         {
@@ -629,6 +639,10 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "podmanager.machineBusy",
+          "when": "false"
+        },
         {
           "command": "podmanager.execInContainer",
           "when": "false"

@@ -20,6 +20,10 @@ Features the README and `package.json` already advertised, but that had no worki
 - Opt-in `podmanager.autoRefreshInterval` (seconds, default `0` = off): refresh the view while it is visible.
 - A **What's New** page (`WHATS_NEW.md`) opens once as a rendered preview after installing or updating to this release, with the security fix, the upgrade steps and the new features. Reopen it with **Show What's New**; turn the automatic opening off with `podmanager.showWhatsNew`.
 
+### Changed
+- The Podman machine button in the view title bar is now a single **toggle**: it shows Start when the machine is stopped and switches to Stop (with a matching machine icon, `$(vm-active)`, instead of the plain stop square) when it is running. The state is read at startup and updated after each start/stop.
+- While a machine start/stop is in progress the button shows a spinning loading icon, and repeated clicks are ignored until the action finishes (also when the command is run from the Command Palette).
+
 ### Fixed
 - Compose actions on a compose-group tree item checked the wrong context value and so never used the group's own project; they now do, and fall back to the previous behaviour when nothing is known about the group.
 - The Push icon was shown even when push was disabled; duplicate menu entries were removed.
