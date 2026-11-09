@@ -1,5 +1,41 @@
 # Changelog
 
+## [3.1.3] – 2026-11-08
+### Security
+- Fixed command injection. Podman and compose commands were built as one text string and run through the system shell, so attacker-controlled text could run as commands. Everything now runs via `execFile` with an argument array (no shell), including Open in Terminal and live logs, which start podman directly instead of typing a command into a shell.
+- `podmanager.podmanPath`, `podmanager.composePath` and `podmanager.machineName` are now `machine`-scoped, so a repository can no longer override them through `.vscode/settings.json` (previously this ran attacker-chosen commands as soon as the folder was opened).
+- Declared limited Workspace Trust support, with those three settings restricted in untrusted workspaces.
+- Folder, file, project, image, container, pod, volume and network names are passed as plain arguments; values that start with `-` or contain control characters are rejected, and machine names are validated.
+
+### Added
+Features the README and `package.json` already advertised, but that had no working handler:
+- **Stop Podman Machine** (`podmanager.stopPodmanMachine`, in the view title bar) and **Show Podman Machine Status**. The machine state is also shown briefly in the status bar at startup.
+- **Execute Command in Container**: runs the text with `/bin/sh -c` inside the container and shows the output.
+- **Push Image** (only offered when `podmanager.enablePushCommand` is on); the destination is pre-filled from `podmanager.pushDefaultRegistry`.
+- **View Details** for volumes, networks, pods (and containers/images): opens the `podman inspect` JSON.
+- **Add Container to Pod**: Podman cannot move a container into a pod, so this runs `podman container clone --destroy --pod` (the container must be stopped; it is re-created with a new ID).
+- **Register Compose Files**: remember compose files by project folder.
+- **Reset Podman Path** is now listed in the Command Palette; a **Documentation** quick link was added.
+- Right-click menu entries for every inline action (inline-only items never appear in a right-click menu).
+- Opt-in `podmanager.autoRefreshInterval` (seconds, default `0` = off): refresh the view while it is visible.
+
+### Fixed
+- Compose actions on a compose-group tree item checked the wrong context value and so never used the group's own project; they now do, and fall back to the previous behaviour when nothing is known about the group.
+- The Push icon was shown even when push was disabled; duplicate menu entries were removed.
+- Create Pod now builds its options correctly (they were previously concatenated without spaces).
+
+### Compatibility
+- `podmanPath` and `composePath` still accept a command line (`flatpak-spawn --host podman`, `sudo podman`, `docker compose`, `podman --remote`). It is split into a program and arguments by the extension (quotes supported) and run without a shell. Quote paths that contain spaces.
+- A leading `~` and `$VAR` / `${VAR}` (`%VAR%` on Windows) in those settings are still substituted. `$(...)` and backticks are not supported.
+- Open in Terminal and live logs still leave a shell open when the command ends (POSIX); on Windows the terminal runs podman directly and closes when it exits.
+- Machine start/stop/list now use your configured podman command instead of a hard-coded `podman`.
+
+### Upgrade notes (what some users must change)
+1. If `podmanPath`, `composePath` or `machineName` were set in a **workspace** or folder `settings.json`, move them to your **user** settings; workspace values are now ignored on purpose.
+2. On **Windows**, `.bat`/`.cmd` wrappers can no longer be used for `podmanPath`/`composePath` (no shell). Point them at the `.exe`.
+3. `podmanPath`/`composePath` values that relied on shell features (pipes, `&&`, redirects, `$(...)`, backticks, aliases, shell functions) no longer work. Use a program plus arguments, or a small wrapper script on your PATH.
+4. Names that start with `-` (for example a container called `-x`) are refused instead of being treated as options.
+
 ## [3.1.1] – 2025-12-24
 ### Added
 - Added `podmanager.logsOutput` setting to choose where container logs are shown: `outputChannel` (default) or `terminal`.

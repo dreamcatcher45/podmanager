@@ -1,66 +1,30 @@
-// src/createContainer.ts
+// src/createPod.ts
 
 import * as vscode from 'vscode';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { showErrorWithCopy } from './utils/messageUtil'; // Assuming you have this utility from extension.ts
-
-const execAsync = promisify(exec)
-
-interface PodInfo {
-    name: string;
-    id: string;
-    hostname: string;
-    additionalhosts: string;
-    cpuShare: string
-}
-
-function getPodmanPath(): string {
-    const config = vscode.workspace.getConfiguration('podmanager');
-    return config.get('podmanPath', 'podman');
-}
+import { showErrorWithCopy } from './utils/messageUtil';
+import { runPodman, describePodman } from './podmanConfig';
+import { PodSpec, buildPodCreateArgs } from './containerArgs';
 
 export async function createPod() {
-    let command = ''; // Define command here to be accessible in catch block
+    let args: string[] = ['pod', 'create']; // Defined here so it is available in the catch block
     try {
-        const name = await vscode.window.showInputBox({ prompt: 'Enter pod name' });
+        const spec: PodSpec = {};
+        spec.name = await vscode.window.showInputBox({ prompt: 'Enter pod name' });
+        spec.hostname = await vscode.window.showInputBox({ prompt: 'Enter hostname or leave empty' });
+        spec.additionalHosts = await vscode.window.showInputBox({ prompt: 'Enter semicolon separated hostnames to additionaly add or leave empty' });
+        spec.cpuShares = await vscode.window.showInputBox({ prompt: 'Enter cpu share (default is 1024) or leave empty' });
 
-        command = `${getPodmanPath()} pod create`;
+        args = buildPodCreateArgs(spec);
 
-        if(name) {
-            command += ` --name ${name}`;
-        }
+        const { stdout, stderr } = await runPodman(args);
 
-        const hostname = await vscode.window.showInputBox({ prompt: 'Enter hostname or leave empty'})
-        if(hostname) {
-            command += `--hostname ${hostname}`
-        }
-
-        const additionalhosts = await vscode.window.showInputBox({ prompt: 'Enter semicolon separated hostnames to additionaly add or leave empty' })
-        if (additionalhosts) {
-            command += `--add-host ${additionalhosts}`;
-        } 
-
-        const cpuShare = await vscode.window.showInputBox({ prompt: 'Enter cpu share (default is 1024) or leave empty' })
-        if (cpuShare) {
-            command += `--cpu-shares ${cpuShare}`;
-        }
-
-        const { stdout, stderr } = await execAsync(command);
-        
         if (stderr) {
-            // Using showErrorWithCopy for better error handling, consistent with extension.ts
-            await showErrorWithCopy(`Error creating pod: ${stderr}`, command);
+            await showErrorWithCopy(`Error creating pod: ${stderr}`, describePodman(args));
         } else {
-            vscode.window.showInformationMessage(`Pod created successfully: ${stdout.trim().substring(0,12)}`);
+            vscode.window.showInformationMessage(`Pod created successfully: ${stdout.trim().substring(0, 12)}`);
             vscode.commands.executeCommand('podmanager.refreshView');
         }
-
-
-
-
     } catch (error) {
-        // Now using showErrorWithCopy in the catch block as well
-        await showErrorWithCopy(`Failed to create container: ${error}`, command);
+        await showErrorWithCopy(`Failed to create pod: ${error}`, describePodman(args));
     }
 }

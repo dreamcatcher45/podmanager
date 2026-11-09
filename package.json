@@ -38,6 +38,17 @@
   "activationEvents": [
     "onStartupFinished"
   ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "In an untrusted workspace, Pod Manager ignores workspace-level values of the settings that choose which programs it runs (podmanager.podmanPath, podmanager.composePath, podmanager.machineName). Only your user settings are used for them.",
+      "restrictedConfigurations": [
+        "podmanager.podmanPath",
+        "podmanager.composePath",
+        "podmanager.machineName"
+      ]
+    }
+  },
   "main": "./out/extension.js",
   "contributes": {
     "viewsContainers": {
@@ -220,6 +231,35 @@
         "command": "podmanager.pushImage",
         "title": "Push Image",
         "icon": "$(cloud-upload)"
+      },
+      {
+        "command": "podmanager.stopPodmanMachine",
+        "title": "Stop Podman Machine",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "podmanager.showMachineStatus",
+        "title": "Show Podman Machine Status",
+        "icon": "$(vm)"
+      },
+      {
+        "command": "podmanager.execInContainer",
+        "title": "Execute Command in Container",
+        "icon": "$(debug-console)"
+      },
+      {
+        "command": "podmanager.viewDetails",
+        "title": "View Details",
+        "icon": "$(info)"
+      },
+      {
+        "command": "podmanager.addContainertToPod",
+        "title": "Add Container to Pod",
+        "icon": "$(add)"
+      },
+      {
+        "command": "podmanager.resetPodmanPath",
+        "title": "Reset Podman Path to Default"
       }
     ],
     "menus": {
@@ -236,6 +276,11 @@
         },
         {
           "command": "podmanager.startPodmanMachine",
+          "when": "view == podmanView",
+          "group": "navigation"
+        },
+        {
+          "command": "podmanager.stopPodmanMachine",
           "when": "view == podmanView",
           "group": "navigation"
         },
@@ -277,11 +322,6 @@
           "group": "inline"
         },
         {
-          "command": "podmanager.viewContainerLogs",
-          "when": "view == podmanView && viewItem == container",
-          "group": "inline"
-        },
-        {
           "command": "podmanager.startContainer",
           "when": "view == podmanView && viewItem == compose-container",
           "group": "inline"
@@ -312,28 +352,8 @@
           "group": "inline"
         },
         {
-          "command": "podmanager.viewContainerLogs",
-          "when": "view == podmanView && viewItem == compose-container",
-          "group": "inline"
-        },
-        {
           "command": "podmanager.deleteImage",
           "when": "view == podmanView && viewItem == image",
-          "group": "inline"
-        },
-        {
-          "command": "podmanager.pushImage",
-          "when": "view == podmanView && viewItem == image",
-          "group": "inline"
-        },
-        {
-          "command": "podmanager.pushImage",
-          "when": "view == podmanView && viewItem == image && config.podmanager.enablePushCommand",
-          "group": "inline"
-        },
-        {
-          "command": "podmanager.pushImage",
-          "when": "view == podmanView && viewItem == image && config.podmanager.enablePushCommand == true",
           "group": "inline"
         },
         {
@@ -395,6 +415,201 @@
           "command": "podmanager.deletePod",
           "when": "view == podmanView && viewItem == pod",
           "group": "inline"
+        },
+        {
+          "command": "podmanager.pushImage",
+          "when": "view == podmanView && viewItem == image && config.podmanager.enablePushCommand",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.viewDetails",
+          "when": "view == podmanView && viewItem == volume",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.viewDetails",
+          "when": "view == podmanView && viewItem == network",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.viewDetails",
+          "when": "view == podmanView && viewItem == pod",
+          "group": "inline"
+        },
+        {
+          "command": "podmanager.startContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "1_podmanager@1"
+        },
+        {
+          "command": "podmanager.stopContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "1_podmanager@2"
+        },
+        {
+          "command": "podmanager.restartContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "1_podmanager@3"
+        },
+        {
+          "command": "podmanager.deleteContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "1_podmanager@4"
+        },
+        {
+          "command": "podmanager.openInTerminal",
+          "when": "view == podmanView && viewItem == container",
+          "group": "1_podmanager@5"
+        },
+        {
+          "command": "podmanager.viewContainerLogs",
+          "when": "view == podmanView && viewItem == container",
+          "group": "1_podmanager@6"
+        },
+        {
+          "command": "podmanager.startContainer",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "1_podmanager@1"
+        },
+        {
+          "command": "podmanager.stopContainer",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "1_podmanager@2"
+        },
+        {
+          "command": "podmanager.restartContainer",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "1_podmanager@3"
+        },
+        {
+          "command": "podmanager.deleteContainer",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "1_podmanager@4"
+        },
+        {
+          "command": "podmanager.openInTerminal",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "1_podmanager@5"
+        },
+        {
+          "command": "podmanager.viewContainerLogs",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "1_podmanager@6"
+        },
+        {
+          "command": "podmanager.deleteImage",
+          "when": "view == podmanView && viewItem == image",
+          "group": "1_podmanager@1"
+        },
+        {
+          "command": "podmanager.deleteVolume",
+          "when": "view == podmanView && viewItem == volume",
+          "group": "1_podmanager@1"
+        },
+        {
+          "command": "podmanager.deleteNetwork",
+          "when": "view == podmanView && viewItem == network",
+          "group": "1_podmanager@1"
+        },
+        {
+          "command": "podmanager.composeUp",
+          "when": "view == podmanView && viewItem == compose-group",
+          "group": "1_podmanager@1"
+        },
+        {
+          "command": "podmanager.composeDown",
+          "when": "view == podmanView && viewItem == compose-group",
+          "group": "1_podmanager@2"
+        },
+        {
+          "command": "podmanager.composeStart",
+          "when": "view == podmanView && viewItem == compose-group",
+          "group": "1_podmanager@3"
+        },
+        {
+          "command": "podmanager.composeStop",
+          "when": "view == podmanView && viewItem == compose-group",
+          "group": "1_podmanager@4"
+        },
+        {
+          "command": "podmanager.composeRestart",
+          "when": "view == podmanView && viewItem == compose-group",
+          "group": "1_podmanager@5"
+        },
+        {
+          "command": "podmanager.refreshOverview",
+          "when": "view == podmanView && viewItem == overview",
+          "group": "1_podmanager@1"
+        },
+        {
+          "command": "podmanager.startPod",
+          "when": "view == podmanView && viewItem == pod",
+          "group": "1_podmanager@1"
+        },
+        {
+          "command": "podmanager.stopPod",
+          "when": "view == podmanView && viewItem == pod",
+          "group": "1_podmanager@2"
+        },
+        {
+          "command": "podmanager.restartPod",
+          "when": "view == podmanView && viewItem == pod",
+          "group": "1_podmanager@3"
+        },
+        {
+          "command": "podmanager.deletePod",
+          "when": "view == podmanView && viewItem == pod",
+          "group": "1_podmanager@4"
+        },
+        {
+          "command": "podmanager.pushImage",
+          "when": "view == podmanView && viewItem == image && config.podmanager.enablePushCommand",
+          "group": "1_podmanager@2"
+        },
+        {
+          "command": "podmanager.viewDetails",
+          "when": "view == podmanView && viewItem == volume",
+          "group": "1_podmanager@2"
+        },
+        {
+          "command": "podmanager.viewDetails",
+          "when": "view == podmanView && viewItem == network",
+          "group": "1_podmanager@2"
+        },
+        {
+          "command": "podmanager.viewDetails",
+          "when": "view == podmanView && viewItem == pod",
+          "group": "1_podmanager@5"
+        },
+        {
+          "command": "podmanager.execInContainer",
+          "when": "view == podmanView && viewItem == container",
+          "group": "1_podmanager@7"
+        },
+        {
+          "command": "podmanager.viewDetails",
+          "when": "view == podmanView && viewItem == container",
+          "group": "1_podmanager@8"
+        },
+        {
+          "command": "podmanager.execInContainer",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "1_podmanager@7"
+        },
+        {
+          "command": "podmanager.viewDetails",
+          "when": "view == podmanView && viewItem == compose-container",
+          "group": "1_podmanager@8"
+        },
+        {
+          "command": "podmanager.addContainertToPod",
+          "when": "view == podmanView && viewItem == container",
+          "group": "1_podmanager@9"
+        },
+        {
+          "command": "podmanager.viewDetails",
+          "when": "view == podmanView && viewItem == image",
+          "group": "1_podmanager@3"
         }
       ],
       "explorer/context": [
@@ -408,6 +623,24 @@
           "when": "resourceFilename == Dockerfile",
           "group": "2_workspace"
         }
+      ],
+      "commandPalette": [
+        {
+          "command": "podmanager.execInContainer",
+          "when": "false"
+        },
+        {
+          "command": "podmanager.viewDetails",
+          "when": "false"
+        },
+        {
+          "command": "podmanager.addContainertToPod",
+          "when": "false"
+        },
+        {
+          "command": "podmanager.pushImage",
+          "when": "false"
+        }
       ]
     },
     "configuration": {
@@ -416,12 +649,14 @@
         "podmanager.podmanPath": {
           "type": "string",
           "default": "podman",
-          "description": "Custom path to the podman executable"
+          "scope": "machine",
+          "description": "Path or command used to run podman, e.g. 'podman', '/usr/bin/podman', 'flatpak-spawn --host podman' or 'podman --remote'. Quote paths that contain spaces. Can only be set in user (or remote machine) settings, not in a workspace's .vscode/settings.json."
         },
         "podmanager.composePath": {
           "type": "string",
           "default": "podman-compose",
-          "description": "Custom path to the compose executable (e.g., 'podman-compose', 'docker-compose.exe', or leave empty to use 'podman compose')"
+          "scope": "machine",
+          "description": "Custom path to the compose executable (e.g., 'podman-compose' or 'docker-compose.exe'). May include leading arguments, e.g. 'docker compose'; quote paths that contain spaces. Never run through a shell. Can only be set in user (or remote machine) settings, not in a workspace's .vscode/settings.json."
         },
         "podmanager.composeCommandStyle": {
           "type": "string",
@@ -436,24 +671,26 @@
         "podmanager.enablePushCommand": {
           "type": "boolean",
           "default": false,
-          "description": "Enable/disable image push command"
+          "description": "Show the Push Image action on images. Off by default."
         },
         "podmanager.pushDefaultRegistry": {
           "type": "string",
           "default": "",
-          "description": "Default registry URL for push command"
+          "description": "Default registry (and namespace) used to pre-fill the destination of Push Image, e.g. 'quay.io/username' or 'docker.io/username'. Leave empty to push to the image's own reference."
         },
         "podmanager.machineName": {
           "type": "string",
           "default": "podman-machine-default",
-          "description": "Name of the Podman machine to connect to"
+          "scope": "machine",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+          "patternErrorMessage": "Machine names may contain only letters, digits, '_', '.' and '-', and must not start with '-'.",
+          "description": "Name of the Podman machine to connect to. Can only be set in user (or remote machine) settings, not in a workspace's .vscode/settings.json."
         },
         "podmanager.confirmDeletions": {
           "type": "boolean",
           "default": true,
           "description": "Ask for confirmation before deleting resources (pods, images, containers, volumes, networks). Uncheck to skip confirmation."
-        }
-        ,
+        },
         "podmanager.logsOutput": {
           "type": "string",
           "default": "outputChannel",
@@ -462,6 +699,12 @@
             "terminal"
           ],
           "description": "Choose where container logs are shown: 'outputChannel' uses the Output panel, 'terminal' opens a new terminal. Default: outputChannel."
+        },
+        "podmanager.autoRefreshInterval": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "Automatically refresh the Podman view every N seconds while it is visible. 0 (the default) turns auto-refresh off. When enabled the minimum interval is 5 seconds."
         }
       }
     }
@@ -472,7 +715,10 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "test:unit": "npm run compile && mocha \"out/test/unit/**/*.test.js\" --ui tdd",
+    "test:integration": "npm run compile && vscode-test",
+    "test:container": "node scripts/run-tests.js"
   },
   "overrides": {
     "mocha": {
@@ -488,6 +734,7 @@
     "@vscode/test-cli": "^0.0.9",
     "@vscode/test-electron": "^2.4.0",
     "eslint": "^8.57.0",
+    "mocha": "^10.8.2",
     "typescript": "^5.4.5"
   }
 }

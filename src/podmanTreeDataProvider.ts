@@ -1,13 +1,22 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { PodmanItem } from './podmanItem';
-import { getPodmanPath } from './podmanConfig';
+import { runPodman, describePodman } from './podmanConfig';
+import { assertSafeArg } from './commandRunner';
 import { withStatus } from './statusBarManager';
 import { showErrorWithCopy } from './utils/messageUtil';
 
-const execAsync = promisify(exec);
+const CONTAINER_LS_ARGS = ['container', 'ls', '-a', '--format', '{{.ID}}|{{.Names}}|{{.Status}}|{{.Labels}}'];
+const IMAGE_LS_ARGS = ['image', 'ls', '--format', '{{.ID}}|{{.Repository}}|{{.Tag}}'];
+const VOLUME_LS_ARGS = ['volume', 'ls', '--format', '{{.Name}}|{{.Driver}}'];
+const NETWORK_LS_ARGS = ['network', 'ls', '--format', '{{.Name}}|{{.Driver}}'];
+const POD_LS_ARGS = ['pod', 'ls', '--format', '{{.ID}}|{{.Name}}|{{.Status}}|{{.Created}}'];
+const podPsArgs = (podId: string): string[] => [
+    'ps',
+    `--filter=pod=${assertSafeArg(podId, 'pod id')}`,
+    '--format',
+    '{{.ID}}|{{.Names}}|{{.Status}}|{{.CreatedAt}}'
+];
 
 interface ContainerInfo {
     id: string;
@@ -57,7 +66,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
 
     async refreshOverview(): Promise<void> {
         await withStatus('Refreshing overview', async () => {
-            const { stdout } = await execAsync(`${getPodmanPath()} system df`);
+            const { stdout } = await runPodman(['system', 'df']);
             this.overviewData = stdout;
             this.refresh();
         });
@@ -123,7 +132,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
     private async getContainers(): Promise<PodmanItem[]> {
         return withStatus('Getting containers', async () => {
             try {
-                const { stdout: containerStdout } = await execAsync(`${getPodmanPath()} container ls -a --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Labels}}"`);
+                const { stdout: containerStdout } = await runPodman(CONTAINER_LS_ARGS);
                 const containers = containerStdout.split('\n')
                     .filter((line: string) => line.trim() !== '')
                     .map((line: string) => {
@@ -163,7 +172,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                 return [...nonComposeContainers, ...composeGroups];
             } catch (error) {
                 console.error('Failed to get containers:', error);
-                await showErrorWithCopy(`Failed to get containers: ${error}`, `${getPodmanPath()} container ls -a --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.Labels}}"`);
+                await showErrorWithCopy(`Failed to get containers: ${error}`, describePodman(CONTAINER_LS_ARGS));
                 throw error;
             }
         });
@@ -172,7 +181,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
     private async getImages(): Promise<PodmanItem[]> {
         return withStatus('Getting images', async () => {
             try {
-                const { stdout } = await execAsync(`${getPodmanPath()} image ls --format "{{.ID}}|{{.Repository}}|{{.Tag}}"`);
+                const { stdout } = await runPodman(IMAGE_LS_ARGS);
                 const imageMap = new Map<string, string[]>();
 
                 stdout.split('\n')
@@ -185,7 +194,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                         imageMap.get(id)!.push(`${repository}:${tag}`);
                     });
 
-                const { stdout: containerStdout } = await execAsync(`${getPodmanPath()} container ls -a --format "{{if .ImageID}}{{.ImageID}}{{else}}none{{end}}"`);
+                const { stdout: containerStdout } = await runPodman(['container', 'ls', '-a', '--format', '{{if .ImageID}}{{.ImageID}}{{else}}none{{end}}']);
                 const usedImageIds = new Set(containerStdout.split('\n').filter((line: string) => line.trim() !== ''));
 
                 return Array.from(imageMap.entries()).map(([id, names]) => {
@@ -209,7 +218,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                     );
                 });
             } catch (error) {
-                await showErrorWithCopy(`Failed to get images: ${error}`, `${getPodmanPath()} image ls --format "{{.ID}}|{{.Repository}}|{{.Tag}}"`);
+                await showErrorWithCopy(`Failed to get images: ${error}`, describePodman(IMAGE_LS_ARGS));
                 throw error;
             }
         });
@@ -218,7 +227,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
     private async getVolumes(): Promise<PodmanItem[]> {
         return withStatus('Getting volumes', async () => {
             try {
-                const { stdout } = await execAsync(`${getPodmanPath()} volume ls --format "{{.Name}}|{{.Driver}}"`);
+                const { stdout } = await runPodman(VOLUME_LS_ARGS);
                 return stdout.split('\n')
                     .filter((line: string) => line.trim() !== '')
                     .map((line: string) => {
@@ -237,7 +246,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                         );
                     });
             } catch (error) {
-                await showErrorWithCopy(`Failed to get volumes: ${error}`, `${getPodmanPath()} volume ls --format "{{.Name}}|{{.Driver}}"`);
+                await showErrorWithCopy(`Failed to get volumes: ${error}`, describePodman(VOLUME_LS_ARGS));
                 return [];
             }
         });
@@ -246,7 +255,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
     private async getNetworks(): Promise<PodmanItem[]> {
         return withStatus('Getting networks', async () => {
             try {
-                const { stdout } = await execAsync(`${getPodmanPath()} network ls --format "{{.Name}}|{{.Driver}}"`);
+                const { stdout } = await runPodman(NETWORK_LS_ARGS);
                 return stdout.split('\n')
                     .filter((line: string) => line.trim() !== '')
                     .map((line: string) => {
@@ -265,7 +274,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                         );
                     });
             } catch (error) {
-                await showErrorWithCopy(`Failed to get networks: ${error}`, `${getPodmanPath()} network ls --format "{{.Name}}|{{.Driver}}"`);
+                await showErrorWithCopy(`Failed to get networks: ${error}`, describePodman(NETWORK_LS_ARGS));
                 return [];
             }
         });
@@ -281,7 +290,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
     private async getPodContainers(podId: string): Promise<PodmanItem[]> {
         return withStatus('Getting pod containers', async () => {
             try {
-                const { stdout } = await execAsync(`${getPodmanPath()} ps --filter "pod=${podId}" --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.CreatedAt}}"`);
+                const { stdout } = await runPodman(podPsArgs(podId));
                 return stdout.split('\n')
                     .filter((line: string) => line.trim() !== '')
                     .map((line: string) => {
@@ -296,7 +305,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                         );
                     });
             } catch (error) {
-                await showErrorWithCopy(`Failed to get containers for pod ${podId}: ${error}`, `${getPodmanPath()} ps --filter "pod=${podId}" --format "{{.ID}}|{{.Names}}|{{.Status}}|{{.CreatedAt}}"`);
+                await showErrorWithCopy(`Failed to get containers for pod ${podId}: ${error}`, describePodman(podPsArgs(podId)));
                 return [];
             }
         });
@@ -305,7 +314,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
     private async getPods(): Promise<PodmanItem[]> {
         return withStatus('Getting pods', async () => {
             try {
-                const { stdout } = await execAsync(`${getPodmanPath()} pod ls --format "{{.ID}}|{{.Name}}|{{.Status}}|{{.Created}}"`);
+                const { stdout } = await runPodman(POD_LS_ARGS);
                 return stdout.split('\n')
                     .filter((line: string) => line.trim() !== '')
                     .map((line: string) => {
@@ -320,7 +329,7 @@ export class PodmanTreeDataProvider implements vscode.TreeDataProvider<PodmanIte
                         );
                     });
             } catch (error) {
-                await showErrorWithCopy(`Failed to get pods: ${error}`, `${getPodmanPath()} pod ls --format "{{.ID}}|{{.Name}}|{{.Status}}|{{.Created}}"`);
+                await showErrorWithCopy(`Failed to get pods: ${error}`, describePodman(POD_LS_ARGS));
                 return [];
             }
         });

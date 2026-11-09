@@ -1,0 +1,24 @@
+version: '3'
+
+tasks:
+  test:
+    desc: Fast local checks (compile, lint, unit tests; no container, no VS Code)
+    cmds:
+      - npm run compile
+      - npm run lint
+      - npm run test:unit
+
+  test:container:
+    desc: Full suite inside a throwaway podman-in-podman container; results in ./test-results
+    cmds:
+      - node scripts/run-tests.js {{.CLI_ARGS}}
+
+  test:container:keep:
+    desc: Same, but always keep the container for inspection
+    cmds:
+      - node scripts/run-tests.js --keep {{.CLI_ARGS}}
+
+  test:clean:
+    desc: Remove test results, the test image and the cache volume
+    cmds:
+      - node scripts/run-tests.js --clean
