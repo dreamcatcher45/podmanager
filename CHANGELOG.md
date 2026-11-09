@@ -18,6 +18,7 @@ Features the README and `package.json` already advertised, but that had no worki
 - **Reset Podman Path** is now listed in the Command Palette; a **Documentation** quick link was added.
 - Right-click menu entries for every inline action (inline-only items never appear in a right-click menu).
 - Opt-in `podmanager.autoRefreshInterval` (seconds, default `0` = off): refresh the view while it is visible.
+- A **What's New** page (`WHATS_NEW.md`) opens once as a rendered preview after installing or updating to this release, with the security fix, the upgrade steps and the new features. Reopen it with **Show What's New**; turn the automatic opening off with `podmanager.showWhatsNew`.
 
 ### Fixed
 - Compose actions on a compose-group tree item checked the wrong context value and so never used the group's own project; they now do, and fall back to the previous behaviour when nothing is known about the group.

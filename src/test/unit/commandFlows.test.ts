@@ -12,6 +12,8 @@ const FAKE = FAKE_SCRIPT;
 const FAKE_SETTING = fakeSetting(); // what podmanPath / composePath are set to (see helpers/fakeProgram.ts)
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 // Poll instead of sleeping a fixed time: spawning a process can take far longer on a loaded machine or in a nested container.
+let startupExecuted: Array<{ id: string; args: any[] }> = [];
+let startupWhatsNewSeen: unknown; // later tests clear globalState, so keep what activation stored
 const waitFor = async (condition: () => boolean, timeoutMs = 15_000) => {
     const end = Date.now() + timeoutMs;
     while (!condition()) {
@@ -58,10 +60,14 @@ suite('command flows (real handlers, fake podman)', function () {
             subscriptions: [],
             workspaceState: { get: (k: string, d: any) => (ctxState.has(k) ? ctxState.get(k) : d), update: async (k: string, v: any) => { ctxState.set(k, v); } },
             globalState: { get: (k: string, d: any) => (globalState.has(k) ? globalState.get(k) : d), update: async (k: string, v: any) => { globalState.set(k, v); } },
+            extensionUri: Uri.file(path.resolve(__dirname, '../../..')),
         });
         provider = ui.treeViews.get('podmanView').treeDataProvider;
         // Activation starts `system df` and a machine check in the background; wait for both before the first test.
         await waitFor(() => argvs().some(a => a[0] === 'system') && argvs().some(a => a[0] === 'machine'));
+        await waitFor(() => ui.executed.some(e => e.id === 'markdown.showPreview'));
+        startupExecuted = [...ui.executed]; // what activation itself asked VS Code to do
+        startupWhatsNewSeen = globalState.get('podmanager.whatsNewSeen');
         await sleep(150);
     });
 
@@ -753,7 +759,7 @@ suite('command flows (real handlers, fake podman)', function () {
                 assert.deepStrictEqual(lastArgv(), expected);
                 assert.strictEqual(ui.documents.length, 1);
                 assert.strictEqual(ui.documents[0].language, 'json');
-                assert.ok(ui.documents[0].content.includes('"Name":"x"'));
+                assert.ok(ui.documents[0].content!.includes('"Name":"x"'));
                 assert.strictEqual(ui.shownDocuments, 1);
             });
         }
@@ -980,6 +986,15 @@ suite('command flows (real handlers, fake podman)', function () {
     });
     // ================================================================ general features from the manual checklist
     suite('sidebar, quick links, tools menu, status bar and refresh', () => {
+        test("activation opens the What's New page once (Markdown preview of WHATS_NEW.md) and remembers it", () => {
+            const preview = startupExecuted.filter(e => e.id === 'markdown.showPreview');
+            assert.strictEqual(preview.length, 1);
+            assert.ok(preview[0].args[0].fsPath.endsWith('/WHATS_NEW.md'));
+            assert.strictEqual(startupWhatsNewSeen, require('../../whatsNew').WHATS_NEW.id);
+        });
+        test("the Show What's New command is registered", () => {
+            assert.ok(ui.commands.has('podmanager.showWhatsNew'));
+        });
         test('activation creates the Resources and Quick Links views', () => {
             assert.ok(ui.treeViews.get('podmanView')?.treeDataProvider);
             assert.ok(ui.treeViews.get('podmanLinks')?.treeDataProvider);

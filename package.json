@@ -260,6 +260,10 @@
       {
         "command": "podmanager.resetPodmanPath",
         "title": "Reset Podman Path to Default"
+      },
+      {
+        "command": "podmanager.showWhatsNew",
+        "title": "Show What's New"
       }
     ],
     "menus": {
@@ -705,6 +709,11 @@
           "default": 0,
           "minimum": 0,
           "description": "Automatically refresh the Podman view every N seconds while it is visible. 0 (the default) turns auto-refresh off. When enabled the minimum interval is 5 seconds."
+        },
+        "podmanager.showWhatsNew": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open the What's New page once after Pod Manager is installed or updated to a release that has important notes. You can always open it with the \"Show What's New\" command."
         }
       }
     }

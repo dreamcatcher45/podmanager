@@ -21,6 +21,7 @@ import {
 } from './podmanConfig';
 import { runCommand, assertSafeArg, formatCommand } from './commandRunner';
 import { buildComposeInvocation, ComposeInvocation } from './composeCommand';
+import { openWhatsNew, showWhatsNewOnce } from './whatsNew';
 import { extractContainerId, execInContainer, pushImage, viewDetails, addContainerToPod } from './resourceActions';
 
 const podmanTreeDataProvider = new PodmanTreeDataProvider();
@@ -157,6 +158,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('podmanager.startPodmanMachine', startPodmanMachine),
         vscode.commands.registerCommand('podmanager.stopPodmanMachine', stopPodmanMachine),
         vscode.commands.registerCommand('podmanager.showMachineStatus', showPodmanMachineStatus),
+        vscode.commands.registerCommand('podmanager.showWhatsNew', () => openWhatsNew(context.extensionUri)),
         vscode.commands.registerCommand('podmanager.registerComposeFiles', registerComposeFiles),
         vscode.commands.registerCommand('podmanager.execInContainer', execInContainer),
         vscode.commands.registerCommand('podmanager.pushImage', pushImage),
@@ -232,6 +234,7 @@ export function activate(context: vscode.ExtensionContext) {
     setupAutoRefresh(context, treeView);
 
     void reportPodmanMachineStatus();
+    void showWhatsNewOnce(context);
 }
 
 // Opt-in polling (podmanager.autoRefreshInterval seconds, 0 = off). Only refreshes while the view is visible.

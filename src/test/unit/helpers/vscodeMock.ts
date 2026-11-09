@@ -7,6 +7,7 @@ export class Uri {
     constructor(public fsPath: string, public scheme = 'file') {}
     static file(p: string) { return new Uri(p); }
     static parse(s: string) { return new Uri(s, 'https'); }
+    static joinPath(base: Uri, ...parts: string[]) { return new Uri([base.fsPath.replace(/[\\/]+$/, ''), ...parts].join('/'), base.scheme); }
     toString() { return this.scheme === 'file' ? `file://${this.fsPath}` : this.fsPath; }
 }
 export class ThemeColor { constructor(public id: string) {} }
@@ -59,7 +60,7 @@ export const ui = {
     openDialogResult: undefined as Uri[] | undefined,
     openDialogOptions: [] as any[],
     /** Documents opened with openTextDocument / showTextDocument. */
-    documents: [] as Array<{ content: string; language?: string }>,
+    documents: [] as Array<{ content?: string; language?: string; uri?: string }>,
     shownDocuments: 0,
     configListeners: [] as Array<(e: any) => void>,
     treeVisible: true,
@@ -142,7 +143,7 @@ export const workspace = {
         inspect: (_key: string) => undefined,
     }),
     findFiles: async (glob?: any) => (typeof ui.findFilesResult === 'function' ? ui.findFilesResult(String(glob)) : ui.findFilesResult),
-    openTextDocument: async (opts: any) => { ui.documents.push({ content: opts.content, language: opts.language }); return opts; },
+    openTextDocument: async (opts: any) => { ui.documents.push({ content: opts.content, language: opts.language, uri: opts instanceof Uri ? opts.fsPath : undefined }); return opts; },
     onDidChangeConfiguration: (listener: (e: any) => void) => {
         ui.configListeners.push(listener);
         return { dispose: () => { ui.configListeners = ui.configListeners.filter(l => l !== listener); } };
