@@ -182,9 +182,13 @@ export function formatCommand(file: string, args: string[], platform: NodeJS.Pla
         if (/^[A-Za-z0-9_@%+=:,./\\-]+$/.test(s)) {
             return s;
         }
-        return platform === 'win32'
-            ? `"${s.replace(/"/g, '\\"')}"`
-            : `'${s.replace(/'/g, `'\\''`)}'`;
+        if (platform === 'win32') {
+            // Double backslashes that precede a quote (or the closing quote), then escape the quotes.
+            const escaped = s.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, '$1$1');
+            return `"${escaped}"`;
+        }
+        // POSIX single quotes: only ' needs handling (backslash is literal inside them).
+        return `'${s.split("'").join(`'\\''`)}'`;
     };
     return [file, ...args].map(quote).join(' ');
 }

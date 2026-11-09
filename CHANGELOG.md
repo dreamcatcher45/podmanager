@@ -5,6 +5,7 @@
 - Fixed command injection. Podman and compose commands were built as one text string and run through the system shell, so attacker-controlled text could run as commands. Everything now runs via `execFile` with an argument array (no shell), including Open in Terminal and live logs, which start podman directly instead of typing a command into a shell.
 - `podmanager.podmanPath`, `podmanager.composePath` and `podmanager.machineName` are now `machine`-scoped, so a repository can no longer override them through `.vscode/settings.json` (previously this ran attacker-chosen commands as soon as the folder was opened).
 - Declared limited Workspace Trust support, with those three settings restricted in untrusted workspaces.
+- "Copy Command" text (display only, never executed) now escapes backslashes correctly on Windows (CodeQL js/incomplete-sanitization).
 - Folder, file, project, image, container, pod, volume and network names are passed as plain arguments; values that start with `-` or contain control characters are rejected, and machine names are validated.
 
 ### Added
