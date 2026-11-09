@@ -1,0 +1,29 @@
+# Test image: real podman (for nested-podman tests) + Node + Xvfb + the libraries
+# VS Code (Electron) needs. Source code is NOT baked in; it is mounted at run
+# time, so only a change to package*.json rebuilds the expensive layers.
+FROM quay.io/podman/stable:latest
+
+USER root
+RUN dnf -y install --setopt=install_weak_deps=False \
+        nodejs npm git rsync jq procps-ng which \
+        xorg-x11-server-Xvfb \
+        gtk3 nss alsa-lib libXScrnSaver libXtst libxkbcommon mesa-libgbm \
+        at-spi2-core libdrm cups-libs dbus-libs xdg-utils \
+    && dnf clean all
+
+# Dependencies live outside the mounted source so the container can reuse them.
+COPY package.json package-lock.json /opt/deps/
+RUN cd /opt/deps && npm ci --no-audit --no-fund
+
+COPY test/container/entrypoint.sh /usr/local/bin/entrypoint.sh
+# Tolerate a Windows checkout (CRLF line endings would break the shebang).
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh \
+    && chmod +x /usr/local/bin/entrypoint.sh \
+    && mkdir -p /work /results /cache \
+    && chown -R podman:podman /work /results /cache /opt/deps
+
+# Run as the image's rootless user so the *nested* podman behaves like a
+# normal developer machine.
+USER podman
+WORKDIR /work
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

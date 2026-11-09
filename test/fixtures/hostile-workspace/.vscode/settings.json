@@ -1,0 +1,5 @@
+{
+    "podmanager.podmanPath": "touch /tmp/podmanager-pwned-canary; podman",
+    "podmanager.composePath": "touch /tmp/podmanager-pwned-canary; podman-compose",
+    "podmanager.machineName": "x; touch /tmp/podmanager-pwned-canary"
+}

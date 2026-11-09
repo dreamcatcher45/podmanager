@@ -1,0 +1,6 @@
+# Scripts and the fake podman are executed on Linux (also inside the test container),
+# so they must keep LF endings even when checked out on Windows with core.autocrlf.
+*.sh                        text eol=lf
+test/container/**           text eol=lf
+test/fake-podman/**         text eol=lf
+Taskfile.yml                text eol=lf

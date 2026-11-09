@@ -1,13 +1,6 @@
 import * as vscode from 'vscode';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
-
-function getPodmanPath(): string {
-    const config = vscode.workspace.getConfiguration('podmanager');
-    return config.get('podmanPath', 'podman');
-}
+import { runPodman } from './podmanConfig';
+import { assertSafeArg } from './commandRunner';
 
 export async function createVolume() {
     const volumeName = await vscode.window.showInputBox({
@@ -17,7 +10,7 @@ export async function createVolume() {
 
     if (volumeName) {
         try {
-            await execAsync(`${getPodmanPath()} volume create ${volumeName}`);
+            await runPodman(['volume', 'create', assertSafeArg(volumeName, 'volume name')]);
             vscode.window.showInformationMessage(`Volume '${volumeName}' created successfully`);
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to create volume: ${error}`);
@@ -33,7 +26,7 @@ export async function createNetwork() {
 
     if (networkName) {
         try {
-            await execAsync(`${getPodmanPath()} network create ${networkName}`);
+            await runPodman(['network', 'create', assertSafeArg(networkName, 'network name')]);
             vscode.window.showInformationMessage(`Network '${networkName}' created successfully`);
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to create network: ${error}`);

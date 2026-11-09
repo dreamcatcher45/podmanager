@@ -9,3 +9,14 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 **/.vscode-test.*
+
+# Test harness and repo tooling: never ship these in the VSIX
+test/**
+out/test/**
+scripts/**
+.github/**
+Taskfile.yml
+TESTING.md
+CHECKLIST.md
+.containerignore
+test-results/**
